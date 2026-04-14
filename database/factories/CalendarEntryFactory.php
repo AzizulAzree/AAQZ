@@ -15,25 +15,30 @@ class CalendarEntryFactory extends Factory
 
     public function definition(): array
     {
-        $faker = $this->faker ?? $this->withFaker();
+        $titles = [
+            'Client check-in',
+            'Invoice follow-up',
+            'Content review',
+            'Deployment window',
+            'Planning block',
+            'Research session',
+            'Support backlog review',
+            'Weekly wrap-up',
+        ];
 
-        $date = CarbonImmutable::instance(
-            $faker->dateTimeBetween('-2 months', '+2 months'),
-        )->startOfDay();
+        $details = [
+            'Reviewed current progress and captured the next follow-up action.',
+            'Summarized the latest findings and queued the remaining tasks.',
+            'Checked status, logged blockers, and noted the next update window.',
+            null,
+        ];
+
+        $date = CarbonImmutable::today()->addDays(random_int(-60, 60));
 
         return [
             'entry_date' => $date->toDateString(),
-            'title' => $faker->randomElement([
-                'Client check-in',
-                'Invoice follow-up',
-                'Content review',
-                'Deployment window',
-                'Planning block',
-                'Research session',
-                'Support backlog review',
-                'Weekly wrap-up',
-            ]),
-            'details' => $faker->boolean(65) ? $faker->sentence() : null,
+            'title' => $titles[array_rand($titles)],
+            'details' => $details[array_rand($details)],
             'source_type' => null,
             'source_id' => null,
         ];
