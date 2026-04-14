@@ -13,6 +13,51 @@ To keep the app private:
 - The main dashboard is protected by the `auth` middleware.
 - Email verification routes were removed because this single-user app does not need that extra flow.
 
+## Dashboard Calendar
+
+The main dashboard now renders a lightweight monthly calendar in Blade with no heavy JavaScript calendar dependency.
+
+- Month calculations use `CarbonImmutable` so day, month, and year boundaries stay accurate.
+- The grid is aligned Sunday through Saturday and includes the leading and trailing days needed to complete each week row.
+- Previous and next month navigation is driven by the `month=YYYY-MM` query string.
+- The current day is highlighted automatically.
+- Small per-day summaries are shown from the `calendar_entries` table.
+
+Calendar entries currently come from the manual `calendar_entries` table, but the dashboard uses a dedicated collector so additional models can feed the calendar later without rewriting the view.
+
+### Calendar Entries Table
+
+The calendar uses a `calendar_entries` table with these fields:
+
+- `entry_date`
+- `title`
+- `details` nullable
+- `source_type` nullable
+- `source_id` nullable
+- timestamps
+
+Manual entries can be created in Tinker for now:
+
+```bash
+php artisan tinker
+```
+
+```php
+\App\Models\CalendarEntry::create([
+    'entry_date' => '2026-04-20',
+    'title' => 'Example entry',
+    'details' => 'Shown on the dashboard calendar.',
+]);
+```
+
+For local debug data, run:
+
+```bash
+php artisan db:seed
+```
+
+That seeds realistic `calendar_entries` rows across past, current, and future months so the dashboard calendar has meaningful data to inspect, including a few busy days with multiple entries and many empty dates between them.
+
 ## Create The First User
 
 Use the custom Artisan command:
