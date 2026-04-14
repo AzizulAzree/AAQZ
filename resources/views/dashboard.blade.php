@@ -16,9 +16,98 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900 space-y-2">
-                    <p>{{ __('Welcome back.') }}</p>
-                    <p class="text-sm text-gray-600">{{ __('Your calendar and account tools are ready whenever you need them.') }}</p>
+                <div class="p-4 text-gray-900">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">{{ __('Coming up next') }}</h3>
+                            <p class="mt-1 text-xs text-gray-500">{{ __('A quick look at the next three days, starting today.') }}</p>
+                        </div>
+                        <div class="text-xs text-gray-400">{{ __('Personal reminders') }}</div>
+                    </div>
+
+                    <div class="mt-4 grid gap-3 md:grid-cols-3">
+                        @foreach ($reminderDays as $reminderDay)
+                            <section class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $reminderDay['label'] }}</p>
+                                        <p class="mt-1 text-sm font-semibold text-gray-900">{{ $reminderDay['date']->isoFormat('D MMM') }}</p>
+                                    </div>
+                                    <span class="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-gray-500">
+                                        {{ trans_choice('{0} Free|{1} :count plan|[2,*] :count plans', $reminderDay['entries']->count(), ['count' => $reminderDay['entries']->count()]) }}
+                                    </span>
+                                </div>
+
+                                <div class="mt-3 space-y-2">
+                                    @forelse ($reminderDay['entries']->take(3) as $entry)
+                                        <button
+                                            type="button"
+                                            x-data="{ hovered: false }"
+                                            x-on:mouseenter="hovered = true"
+                                            x-on:mouseleave="hovered = false"
+                                            x-on:click="showEntryModal(@js([
+                                                'id' => $entry['id'],
+                                                'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
+                                                'title' => $entry['title'],
+                                                'details' => $entry['details'],
+                                                'source_type' => $entry['source_type'],
+                                                'source_id' => $entry['source_id'],
+                                                'owner_name' => $entry['owner_name'],
+                                                'owner_color' => $entry['owner_color'],
+                                                'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
+                                                'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
+                                            ]))"
+                                            class="flex w-full items-center gap-2 truncate rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-left text-xs font-medium text-gray-700 transition duration-150 hover:shadow-sm"
+                                            title="{{ $entry['details'] ?: __('Open this entry to see more information.') }}"
+                                            @if ($entry['owner_color'])
+                                                x-bind:style="'border-color: {{ $entry['owner_color'] }}; background-color: ' + (hovered ? rgba('{{ $entry['owner_color'] }}', 0.12) : '#ffffff')"
+                                            @endif
+                                        >
+                                            @if ($entry['owner_color'])
+                                                <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $entry['owner_color'] }}"></span>
+                                            @endif
+                                            <span
+                                                class="truncate"
+                                                @if ($entry['owner_color'])
+                                                    style="color: {{ $entry['owner_color'] }}"
+                                                @endif
+                                            >
+                                                {{ $entry['title'] }}
+                                            </span>
+                                        </button>
+                                    @empty
+                                        <p class="text-xs text-gray-400">{{ __('No reminders yet.') }}</p>
+                                    @endforelse
+
+                                    @if ($reminderDay['entries']->count() > 3)
+                                        <button
+                                            type="button"
+                                            x-on:click="showDayModal(
+                                                @js($reminderDay['date']->isoFormat('dddd, D MMMM YYYY')),
+                                                @js(
+                                                    $reminderDay['entries']->map(fn ($entry) => [
+                                                        'id' => $entry['id'],
+                                                        'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
+                                                        'title' => $entry['title'],
+                                                        'details' => $entry['details'],
+                                                        'source_type' => $entry['source_type'],
+                                                        'source_id' => $entry['source_id'],
+                                                        'owner_name' => $entry['owner_name'],
+                                                        'owner_color' => $entry['owner_color'],
+                                                        'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
+                                                        'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
+                                                    ])->values()
+                                                )
+                                            )"
+                                            class="text-xs font-medium text-gray-500 hover:text-gray-700"
+                                        >
+                                            {{ __('+:count more', ['count' => $reminderDay['entries']->count() - 3]) }}
+                                        </button>
+                                    @endif
+                                </div>
+                            </section>
+                        @endforeach
+                    </div>
                 </div>
             </div>
 
@@ -29,6 +118,31 @@
                     selectedDayEntries: [],
                     createEntryDate: @js(old('entry_date', $createEntryDate)),
                     createEntryLabel: @js(old('entry_date_label', $createEntryLabel)),
+                    rgba(color, alpha) {
+                        if (! color || ! color.startsWith('#')) {
+                            return '';
+                        }
+
+                        const normalized = color.length === 4
+                            ? `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`
+                            : color;
+
+                        const hex = normalized.slice(1);
+
+                        if (hex.length !== 6) {
+                            return '';
+                        }
+
+                        const r = Number.parseInt(hex.slice(0, 2), 16);
+                        const g = Number.parseInt(hex.slice(2, 4), 16);
+                        const b = Number.parseInt(hex.slice(4, 6), 16);
+
+                        if ([r, g, b].some(Number.isNaN)) {
+                            return '';
+                        }
+
+                        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                    },
                     showEntryModal(entry) {
                         this.selectedDay = null;
                         this.selectedDayEntries = [];
@@ -125,6 +239,9 @@
                                                             @foreach ($day['entries']->take(3) as $entry)
                                                                 <button
                                                                     type="button"
+                                                                    x-data="{ hovered: false }"
+                                                                    x-on:mouseenter="hovered = true"
+                                                                    x-on:mouseleave="hovered = false"
                                                                     x-on:click="showEntryModal(@js([
                                                                         'id' => $entry['id'],
                                                                         'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
@@ -134,17 +251,26 @@
                                                                         'source_id' => $entry['source_id'],
                                                                         'owner_name' => $entry['owner_name'],
                                                                         'owner_color' => $entry['owner_color'],
+                                                                        'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
+                                                                        'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
                                                                     ]))"
-                                                                    class="flex w-full items-center gap-2 truncate rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-left text-xs font-medium text-gray-700 hover:border-gray-300 hover:bg-gray-100"
-                                                                    title="{{ $entry['title'] }}"
+                                                                    class="flex w-full items-center gap-2 truncate rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-left text-xs font-medium text-gray-700 transition duration-150 hover:shadow-sm"
+                                                                    title="{{ $entry['details'] ?: __('Open this entry to see more information.') }}"
                                                                     @if ($entry['owner_color'])
-                                                                        style="border-left: 3px solid {{ $entry['owner_color'] }}"
+                                                                        x-bind:style="'border-color: {{ $entry['owner_color'] }}; background-color: ' + (hovered ? rgba('{{ $entry['owner_color'] }}', 0.12) : '#ffffff')"
                                                                     @endif
                                                                 >
                                                                     @if ($entry['owner_color'])
                                                                         <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $entry['owner_color'] }}"></span>
                                                                     @endif
-                                                                    <span class="truncate">{{ $entry['title'] }}</span>
+                                                                    <span
+                                                                        class="truncate"
+                                                                        @if ($entry['owner_color'])
+                                                                            style="color: {{ $entry['owner_color'] }}"
+                                                                        @endif
+                                                                    >
+                                                                        {{ $entry['title'] }}
+                                                                    </span>
                                                                 </button>
                                                             @endforeach
 
@@ -163,6 +289,8 @@
                                                                                 'source_id' => $entry['source_id'],
                                                                                 'owner_name' => $entry['owner_name'],
                                                                                 'owner_color' => $entry['owner_color'],
+                                                                                'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
+                                                                                'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
                                                                             ])->values()
                                                                         )
                                                                     )"
@@ -208,11 +336,11 @@
                                 <p class="mt-1 text-gray-600" x-text="selectedEntry?.details || '{{ __('No additional details for this entry.') }}'"></p>
                             </div>
 
-                            <template x-if="selectedEntry?.source_type || selectedEntry?.source_id">
+                            <template x-if="selectedEntry?.source_type && selectedEntry.source_type !== 'self'">
                                 <div>
                                     <p class="font-medium text-gray-900">{{ __('Reference') }}</p>
                                     <p class="mt-1 text-gray-600">
-                                        <span x-text="selectedEntry?.source_type || '{{ __('Added here') }}'"></span>
+                                        <span x-text="selectedEntry?.source_type"></span>
                                         <span x-show="selectedEntry?.source_id">#<span x-text="selectedEntry?.source_id"></span></span>
                                     </p>
                                 </div>
@@ -230,6 +358,24 @@
                                     </div>
                                 </div>
                             </template>
+
+                            <div>
+                                <p class="font-medium text-gray-900">{{ __('Record information') }}</p>
+                                <dl class="mt-2 space-y-2 text-gray-600">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <dt class="font-medium text-gray-900">{{ __('Record ID') }}</dt>
+                                        <dd x-text="selectedEntry?.id"></dd>
+                                    </div>
+                                    <div class="flex items-start justify-between gap-4" x-show="selectedEntry?.created_at">
+                                        <dt class="font-medium text-gray-900">{{ __('Created') }}</dt>
+                                        <dd class="text-right" x-text="selectedEntry?.created_at"></dd>
+                                    </div>
+                                    <div class="flex items-start justify-between gap-4" x-show="selectedEntry?.updated_at">
+                                        <dt class="font-medium text-gray-900">{{ __('Last updated') }}</dt>
+                                        <dd class="text-right" x-text="selectedEntry?.updated_at"></dd>
+                                    </div>
+                                </dl>
+                            </div>
                         </div>
                     </div>
                 </x-modal>
@@ -316,6 +462,7 @@
                                     x-on:click="selectedEntry = entry; $dispatch('close-modal', 'calendar-day-details'); $dispatch('open-modal', 'calendar-entry-details')"
                                     class="block w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-left hover:border-gray-300 hover:bg-gray-100"
                                     :style="entry.owner_color ? `border-left: 4px solid ${entry.owner_color}` : ''"
+                                    :title="entry.details || '{{ __('Open this entry to see more information.') }}'"
                                 >
                                     <div class="flex items-center gap-2">
                                         <span

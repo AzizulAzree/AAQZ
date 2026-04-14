@@ -55,6 +55,8 @@ class CalendarEntryCollector
                     'source_id' => $entry->source_id,
                     'owner_name' => $owner?->name,
                     'owner_color' => $owner?->ownerColor(),
+                    'created_at' => $entry->created_at?->toImmutable(),
+                    'updated_at' => $entry->updated_at?->toImmutable(),
                     'model' => $entry,
                 ];
             });

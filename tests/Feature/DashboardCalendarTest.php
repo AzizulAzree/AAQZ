@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\CalendarEntry;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -54,6 +55,11 @@ class DashboardCalendarTest extends TestCase
         $response->assertSee('background-color: #3B82F6', false);
         $response->assertSee('data-date="2026-04-10"', false);
         $response->assertDontSee('Out of month entry');
+        $response->assertSee('Initial planning session');
+        $response->assertSee('Record information');
+        $response->assertSee('created_at', false);
+        $response->assertSee('updated_at', false);
+        $response->assertDontSee('Added here');
     }
 
     public function test_dashboard_day_modal_uses_entry_ids_for_duplicate_titles(): void
@@ -140,5 +146,61 @@ class DashboardCalendarTest extends TestCase
 
         $response->assertOk();
         $response->assertSee(now()->startOfMonth()->format('F Y'));
+    }
+
+    public function test_dashboard_shows_a_three_day_reminder_summary(): void
+    {
+        CarbonImmutable::setTestNow('2026-04-14 09:00:00');
+
+        try {
+            $user = User::factory()->create(['color' => '#3B82F6']);
+
+            CalendarEntry::create([
+                'entry_date' => '2026-04-14',
+                'title' => 'Morning check-in',
+                'details' => 'Bring notes for the day.',
+                'source_type' => 'self',
+                'source_id' => $user->id,
+            ]);
+
+            CalendarEntry::create([
+                'entry_date' => '2026-04-15',
+                'title' => 'Dentist visit',
+                'details' => 'Appointment at 3 PM.',
+                'source_type' => 'self',
+                'source_id' => $user->id,
+            ]);
+
+            CalendarEntry::create([
+                'entry_date' => '2026-04-16',
+                'title' => 'Family dinner',
+                'details' => 'Reservation confirmed.',
+                'source_type' => 'self',
+                'source_id' => $user->id,
+            ]);
+
+            CalendarEntry::create([
+                'entry_date' => '2026-04-18',
+                'title' => 'Later reminder',
+            ]);
+
+            $response = $this
+                ->actingAs($user)
+                ->get('/dashboard?month=2026-04');
+
+            $response->assertOk();
+            $response->assertSee('Coming up next');
+            $response->assertSee('Today');
+            $response->assertSee('Tomorrow');
+            $response->assertSee('Thursday');
+            $response->assertSee('Morning check-in');
+            $response->assertSee('Dentist visit');
+            $response->assertSee('Family dinner');
+            $response->assertSee('14 Apr');
+            $response->assertSee('15 Apr');
+            $response->assertSee('16 Apr');
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
     }
 }

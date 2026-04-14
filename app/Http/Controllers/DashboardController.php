@@ -17,11 +17,30 @@ class DashboardController extends Controller
     {
         $calendar = CalendarMonth::fromMonthString($request->string('month')->toString());
         $createEntryDate = $request->old('entry_date');
+        $reminderStart = $calendar->today->startOfDay();
+        $reminderEnd = $reminderStart->addDays(2);
+        $reminderEntries = $entryCollector->forRange($reminderStart, $reminderEnd)
+            ->groupBy(fn (array $entry) => $entry['date']->toDateString());
 
         return view('dashboard', [
             'calendar' => $calendar->withEntries(
                 $entryCollector->forRange($calendar->gridStartsAt(), $calendar->gridEndsAt()),
             ),
+            'reminderDays' => collect(range(0, 2))
+                ->map(function (int $offset) use ($reminderStart, $reminderEntries): array {
+                    $date = $reminderStart->addDays($offset);
+
+                    return [
+                        'date' => $date,
+                        'label' => match ($offset) {
+                            0 => __('Today'),
+                            1 => __('Tomorrow'),
+                            default => $date->isoFormat('dddd'),
+                        },
+                        'entries' => $reminderEntries->get($date->toDateString(), collect()),
+                    ];
+                })
+                ->all(),
             'selectedMonthQuery' => $calendar->month->format('Y-m'),
             'createEntryDate' => $createEntryDate,
             'createEntryLabel' => $createEntryDate
