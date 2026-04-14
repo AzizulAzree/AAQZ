@@ -22,8 +22,21 @@ The main dashboard now renders a lightweight monthly calendar in Blade with no h
 - Previous and next month navigation is driven by the `month=YYYY-MM` query string.
 - The current day is highlighted automatically.
 - Small per-day summaries are shown from the `calendar_entries` table.
+- Clicking a date opens a modal form so signed-in users can add a new entry for that day.
+- Entries created from the dashboard are saved with `source_type=self` and `source_id` set to the signed-in user's id.
+- Self-owned entries show the owner's saved profile color in the calendar cards and entry detail views.
 
 Calendar entries currently come from the manual `calendar_entries` table, but the dashboard uses a dedicated collector so additional models can feed the calendar later without rewriting the view.
+
+## User Colors
+
+Each user has a unique saved color on their account.
+
+- The color is stored on the `users` table.
+- Users can pick their own color from the Profile page.
+- The app prevents two users from saving the same color.
+- The selected color is used across the site to represent the owner, including calendar entries and account markers in the navigation and settings screens.
+- Existing users are given unique default colors when the color migration runs, and new users receive a unique color automatically if one is not provided.
 
 ### Calendar Entries Table
 
@@ -83,6 +96,8 @@ php artisan app:create-user
 ```
 
 The command will prompt for the name, email address, and password, then create the user in the local database.
+
+After signing in, open the Profile page to choose the color that should represent that user throughout the app.
 
 ## Local Development With SQLite
 

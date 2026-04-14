@@ -30,6 +30,7 @@ class ProfileTest extends TestCase
             ->patch('/profile', [
                 'name' => 'Test User',
                 'email' => 'test@example.com',
+                'color' => '#10B981',
             ]);
 
         $response
@@ -40,6 +41,7 @@ class ProfileTest extends TestCase
 
         $this->assertSame('Test User', $user->name);
         $this->assertSame('test@example.com', $user->email);
+        $this->assertSame('#10B981', $user->color);
         $this->assertNull($user->email_verified_at);
     }
 
@@ -52,6 +54,7 @@ class ProfileTest extends TestCase
             ->patch('/profile', [
                 'name' => 'Test User',
                 'email' => $user->email,
+                'color' => $user->color,
             ]);
 
         $response
@@ -59,6 +62,25 @@ class ProfileTest extends TestCase
             ->assertRedirect('/profile');
 
         $this->assertNotNull($user->refresh()->email_verified_at);
+    }
+
+    public function test_profile_color_must_be_unique(): void
+    {
+        $firstUser = User::factory()->create(['color' => '#3B82F6']);
+        $secondUser = User::factory()->create(['color' => '#10B981']);
+
+        $response = $this
+            ->actingAs($secondUser)
+            ->from('/profile')
+            ->patch('/profile', [
+                'name' => $secondUser->name,
+                'email' => $secondUser->email,
+                'color' => $firstUser->color,
+            ]);
+
+        $response
+            ->assertSessionHasErrors('color')
+            ->assertRedirect('/profile');
     }
 
     public function test_user_can_delete_their_account(): void

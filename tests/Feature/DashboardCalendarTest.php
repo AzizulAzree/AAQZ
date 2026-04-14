@@ -13,17 +13,21 @@ class DashboardCalendarTest extends TestCase
 
     public function test_dashboard_shows_selected_month_and_entry_summaries(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['color' => '#3B82F6']);
 
         CalendarEntry::create([
             'entry_date' => '2026-04-10',
             'title' => 'Project kickoff',
             'details' => 'Initial planning session',
+            'source_type' => 'self',
+            'source_id' => $user->id,
         ]);
 
         CalendarEntry::create([
             'entry_date' => '2026-04-10',
             'title' => 'Budget review',
+            'source_type' => 'self',
+            'source_id' => $user->id,
         ]);
 
         CalendarEntry::create([
@@ -47,6 +51,7 @@ class DashboardCalendarTest extends TestCase
         $response->assertSee('calendar-day-details', false);
         $response->assertSee('Project kickoff');
         $response->assertSee('Budget review');
+        $response->assertSee('background-color: #3B82F6', false);
         $response->assertSee('data-date="2026-04-10"', false);
         $response->assertDontSee('Out of month entry');
     }

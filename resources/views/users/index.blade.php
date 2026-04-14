@@ -43,6 +43,7 @@
                             <tr>
                                 <th class="px-4 py-3 text-left font-semibold text-gray-700">{{ __('Name') }}</th>
                                 <th class="px-4 py-3 text-left font-semibold text-gray-700">{{ __('Email') }}</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">{{ __('Color') }}</th>
                                 <th class="px-4 py-3 text-left font-semibold text-gray-700">{{ __('Created') }}</th>
                             </tr>
                         </thead>
@@ -51,11 +52,17 @@
                                 <tr>
                                     <td class="px-4 py-3 text-gray-900">{{ $managedUser->name }}</td>
                                     <td class="px-4 py-3 text-gray-600">{{ $managedUser->email }}</td>
+                                    <td class="px-4 py-3 text-gray-600">
+                                        <div class="flex items-center gap-2">
+                                            <span class="h-3 w-3 rounded-full border border-gray-200" style="background-color: {{ $managedUser->ownerColor() }}"></span>
+                                            <span>{{ $managedUser->ownerColor() }}</span>
+                                        </div>
+                                    </td>
                                     <td class="px-4 py-3 text-gray-500">{{ optional($managedUser->created_at)->format('Y-m-d H:i') }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="3" class="px-4 py-6 text-center text-gray-500">
+                                    <td colspan="4" class="px-4 py-6 text-center text-gray-500">
                                         {{ __('No users found yet.') }}
                                     </td>
                                 </tr>

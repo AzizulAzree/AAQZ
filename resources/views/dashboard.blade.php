@@ -132,11 +132,19 @@
                                                                         'details' => $entry['details'],
                                                                         'source_type' => $entry['source_type'],
                                                                         'source_id' => $entry['source_id'],
+                                                                        'owner_name' => $entry['owner_name'],
+                                                                        'owner_color' => $entry['owner_color'],
                                                                     ]))"
-                                                                    class="block w-full truncate rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-left text-xs font-medium text-gray-700 hover:border-gray-300 hover:bg-gray-100"
+                                                                    class="flex w-full items-center gap-2 truncate rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-left text-xs font-medium text-gray-700 hover:border-gray-300 hover:bg-gray-100"
                                                                     title="{{ $entry['title'] }}"
+                                                                    @if ($entry['owner_color'])
+                                                                        style="border-left: 3px solid {{ $entry['owner_color'] }}"
+                                                                    @endif
                                                                 >
-                                                                    {{ $entry['title'] }}
+                                                                    @if ($entry['owner_color'])
+                                                                        <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $entry['owner_color'] }}"></span>
+                                                                    @endif
+                                                                    <span class="truncate">{{ $entry['title'] }}</span>
                                                                 </button>
                                                             @endforeach
 
@@ -153,6 +161,8 @@
                                                                                 'details' => $entry['details'],
                                                                                 'source_type' => $entry['source_type'],
                                                                                 'source_id' => $entry['source_id'],
+                                                                                'owner_name' => $entry['owner_name'],
+                                                                                'owner_color' => $entry['owner_color'],
                                                                             ])->values()
                                                                         )
                                                                     )"
@@ -205,6 +215,19 @@
                                         <span x-text="selectedEntry?.source_type || '{{ __('Added here') }}'"></span>
                                         <span x-show="selectedEntry?.source_id">#<span x-text="selectedEntry?.source_id"></span></span>
                                     </p>
+                                </div>
+                            </template>
+
+                            <template x-if="selectedEntry?.owner_name">
+                                <div>
+                                    <p class="font-medium text-gray-900">{{ __('Owner') }}</p>
+                                    <div class="mt-1 flex items-center gap-2 text-gray-600">
+                                        <span
+                                            class="h-3 w-3 rounded-full"
+                                            :style="selectedEntry?.owner_color ? `background-color: ${selectedEntry.owner_color}` : ''"
+                                        ></span>
+                                        <span x-text="selectedEntry?.owner_name"></span>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -292,9 +315,18 @@
                                     type="button"
                                     x-on:click="selectedEntry = entry; $dispatch('close-modal', 'calendar-day-details'); $dispatch('open-modal', 'calendar-entry-details')"
                                     class="block w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-left hover:border-gray-300 hover:bg-gray-100"
+                                    :style="entry.owner_color ? `border-left: 4px solid ${entry.owner_color}` : ''"
                                 >
-                                    <div class="truncate text-sm font-medium text-gray-900" x-text="entry.title"></div>
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            class="h-2.5 w-2.5 shrink-0 rounded-full"
+                                            :style="entry.owner_color ? `background-color: ${entry.owner_color}` : ''"
+                                            x-show="entry.owner_color"
+                                        ></span>
+                                        <div class="truncate text-sm font-medium text-gray-900" x-text="entry.title"></div>
+                                    </div>
                                     <div class="mt-1 truncate text-xs text-gray-500" x-text="entry.details || '{{ __('No additional details for this entry.') }}'"></div>
+                                    <div class="mt-1 text-xs text-gray-400" x-show="entry.owner_name" x-text="entry.owner_name"></div>
                                 </button>
                             </template>
                         </div>

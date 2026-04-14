@@ -3,6 +3,7 @@
 namespace App\Support\Calendar;
 
 use App\Models\CalendarEntry;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -24,12 +25,27 @@ class CalendarEntryCollector
 
     private function manualEntriesForRange(CarbonImmutable $start, CarbonImmutable $end): Collection
     {
-        return CalendarEntry::query()
+        $entries = CalendarEntry::query()
             ->whereBetween('entry_date', [$start->toDateString(), $end->toDateString()])
             ->orderBy('entry_date')
             ->orderBy('title')
+            ->get();
+
+        $owners = User::query()
+            ->whereIn('id', $entries
+                ->filter(fn (CalendarEntry $entry) => $entry->source_type === 'self' && $entry->source_id !== null)
+                ->pluck('source_id')
+                ->unique()
+                ->values())
             ->get()
-            ->map(function (CalendarEntry $entry): array {
+            ->keyBy('id');
+
+        return $entries
+            ->map(function (CalendarEntry $entry) use ($owners): array {
+                $owner = $entry->source_type === 'self' && $entry->source_id !== null
+                    ? $owners->get($entry->source_id)
+                    : null;
+
                 return [
                     'id' => $entry->id,
                     'date' => CarbonImmutable::instance($entry->entry_date),
@@ -37,6 +53,8 @@ class CalendarEntryCollector
                     'details' => $entry->details,
                     'source_type' => $entry->source_type,
                     'source_id' => $entry->source_id,
+                    'owner_name' => $owner?->name,
+                    'owner_color' => $owner?->ownerColor(),
                     'model' => $entry,
                 ];
             });
