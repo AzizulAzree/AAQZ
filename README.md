@@ -58,6 +58,22 @@ php artisan db:seed
 
 That seeds realistic `calendar_entries` rows across past, current, and future months so the dashboard calendar has meaningful data to inspect, including a few busy days with multiple entries and many empty dates between them.
 
+## Test User Login
+
+When you run:
+
+```bash
+php artisan db:seed
+```
+
+the app also creates a ready-to-use test account for local use:
+
+- Name: `Test User`
+- Email: `test@example.com`
+- Password: `password`
+
+Use this account to sign in right away after migrating and seeding a local database.
+
 ## Create The First User
 
 Use the custom Artisan command:
@@ -96,13 +112,19 @@ New-Item -ItemType File -Path .\database\database.sqlite -Force
 php artisan migrate
 ```
 
-5. Create your first user:
+5. Seed the database for sample calendar data and a ready-to-use test login:
+
+```bash
+php artisan db:seed
+```
+
+6. Or create your own first user:
 
 ```bash
 php artisan app:create-user
 ```
 
-6. Start the app:
+7. Start the app:
 
 ```bash
 composer run dev

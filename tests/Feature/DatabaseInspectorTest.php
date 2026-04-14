@@ -48,7 +48,7 @@ class DatabaseInspectorTest extends TestCase
             ->get('/admin/database');
 
         $response->assertOk();
-        $response->assertSee('Database Overview');
+        $response->assertSee('Tables');
         $response->assertSee('users');
         $response->assertSee('calendar_entries');
     }
@@ -70,10 +70,10 @@ class DatabaseInspectorTest extends TestCase
             ->get('/admin/database/calendar_entries');
 
         $response->assertOk();
-        $response->assertSee('Columns');
+        $response->assertSee('Field details');
         $response->assertSee('entry_date');
         $response->assertSee('title');
-        $response->assertSee('Latest Rows');
+        $response->assertSee('Saved records');
         $response->assertSee('calendar_entries');
         $response->assertSee('A very long calendar entry title');
     }

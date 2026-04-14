@@ -42,6 +42,8 @@ class DashboardCalendarTest extends TestCase
         $response->assertSee('data-calendar-week="5"', false);
         $response->assertSee('data-date="2026-03-29"', false);
         $response->assertSee('data-date="2026-05-02"', false);
+        $response->assertSee('calendar-entry-details', false);
+        $response->assertSee('calendar-day-details', false);
         $response->assertSee('Project kickoff');
         $response->assertSee('Budget review');
         $response->assertSee('data-date="2026-04-10"', false);

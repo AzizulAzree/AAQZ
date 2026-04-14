@@ -2,14 +2,15 @@
     <x-slot name="header">
         <div class="flex items-center justify-between gap-4">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('Admin') }}
+                {{ __('Settings') }}
             </h2>
 
             <a
                 href="{{ route('database.index') }}"
                 class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                title="{{ __('Open a read-only view of your stored data.') }}"
             >
-                {{ __('Open Database Inspector') }}
+                {{ __('Open Data Browser') }}
             </a>
         </div>
     </x-slot>
@@ -21,7 +22,7 @@
                     <div>
                         <h3 class="text-lg font-medium text-gray-900">{{ __('Users') }}</h3>
                         <p class="mt-1 text-sm text-gray-600">
-                            {{ __('All accounts that can sign in to this private app.') }}
+                            {{ __('People who can sign in to this site.') }}
                         </p>
                     </div>
 
@@ -68,7 +69,7 @@
                 <div class="max-w-2xl">
                     <h3 class="text-lg font-medium text-gray-900">{{ __('Add User') }}</h3>
                     <p class="mt-1 text-sm text-gray-600">
-                        {{ __('Create another login for this app.') }}
+                        {{ __('Create another login for someone who needs access.') }}
                     </p>
 
                     <form method="POST" action="{{ route('users.store') }}" class="mt-6 space-y-6">
