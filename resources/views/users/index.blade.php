@@ -1,8 +1,17 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Admin') }}
-        </h2>
+        <div class="flex items-center justify-between gap-4">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('Admin') }}
+            </h2>
+
+            <a
+                href="{{ route('database.index') }}"
+                class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+                {{ __('Open Database Inspector') }}
+            </a>
+        </div>
     </x-slot>
 
     <div class="py-12">
