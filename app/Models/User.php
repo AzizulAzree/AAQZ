@@ -17,6 +17,13 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    public function isAdmin(): bool
+    {
+        $firstUserId = static::query()->orderBy('id')->value('id');
+
+        return $firstUserId !== null && $this->id === $firstUserId;
+    }
+
     /**
      * Get the attributes that should be cast.
      *
