@@ -94,6 +94,8 @@
                     </form>
                 </div>
             </div>
+
+            @include('admin.database.partials.overview', ['databaseOverview' => $databaseOverview])
         </div>
     </div>
 </x-app-layout>

@@ -45,51 +45,64 @@
                         </a>
                     </div>
 
-                    <div class="mt-6 grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200">
-                        @foreach ($calendar->weekdayLabels as $weekday)
-                            <div class="bg-gray-50 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                {{ $weekday }}
-                            </div>
-                        @endforeach
-
-                        @foreach ($calendar->weeks as $week)
-                            @foreach ($week as $day)
-                                <div
-                                    data-date="{{ $day['date']->toDateString() }}"
-                                    class="{{ $day['is_current_month'] ? 'bg-white' : 'bg-gray-50' }} min-h-32 p-3 align-top"
-                                >
-                                    <div class="flex items-center justify-between gap-2">
-                                        <span
-                                            class="{{ $day['is_today'] ? 'bg-gray-900 text-white' : ($day['is_current_month'] ? 'text-gray-900' : 'text-gray-400') }} inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
-                                        >
-                                            {{ $day['date']->day }}
-                                        </span>
-                                        @if ($day['entries']->isNotEmpty())
-                                            <span class="text-xs text-gray-400">
-                                                {{ trans_choice('{1} :count item|[2,*] :count items', $day['entries']->count(), ['count' => $day['entries']->count()]) }}
-                                            </span>
-                                        @endif
-                                    </div>
-
-                                    <div class="mt-3 space-y-2">
-                                        @foreach ($day['entries']->take(3) as $entry)
-                                            <div class="rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700">
-                                                <div class="font-medium text-gray-900">{{ $entry['title'] }}</div>
-                                                @if ($entry['details'])
-                                                    <div class="mt-1 text-gray-500">{{ $entry['details'] }}</div>
-                                                @endif
-                                            </div>
+                    <div class="mt-6 overflow-hidden rounded-lg border border-gray-200 bg-gray-200">
+                        <div class="overflow-x-auto">
+                            <table data-calendar-grid class="min-w-full table-fixed border-separate border-spacing-px bg-gray-200">
+                                <thead>
+                                    <tr>
+                                        @foreach ($calendar->weekdayLabels as $weekday)
+                                            <th scope="col" class="bg-gray-50 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                {{ $weekday }}
+                                            </th>
                                         @endforeach
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($calendar->weeks as $weekIndex => $week)
+                                        <tr data-calendar-week="{{ $weekIndex + 1 }}" class="align-top">
+                                            @foreach ($week as $day)
+                                                <td
+                                                    data-date="{{ $day['date']->toDateString() }}"
+                                                    class="{{ $day['is_current_month'] ? 'bg-white' : 'bg-gray-50' }} w-1/7"
+                                                >
+                                                    <div class="h-36 p-3">
+                                                        <div class="flex items-center justify-between gap-2">
+                                                            <span
+                                                                class="{{ $day['is_today'] ? 'bg-gray-900 text-white' : ($day['is_current_month'] ? 'text-gray-900' : 'text-gray-400') }} inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
+                                                            >
+                                                                {{ $day['date']->day }}
+                                                            </span>
+                                                            @if ($day['entries']->isNotEmpty())
+                                                                <span class="text-xs text-gray-400">
+                                                                    {{ trans_choice('{1} :count item|[2,*] :count items', $day['entries']->count(), ['count' => $day['entries']->count()]) }}
+                                                                </span>
+                                                            @endif
+                                                        </div>
 
-                                        @if ($day['entries']->count() > 3)
-                                            <div class="text-xs text-gray-500">
-                                                {{ __('+:count more', ['count' => $day['entries']->count() - 3]) }}
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            @endforeach
-                        @endforeach
+                                                        <div class="mt-3 space-y-2">
+                                                            @foreach ($day['entries']->take(3) as $entry)
+                                                                <div class="rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700">
+                                                                    <div class="truncate font-medium text-gray-900">{{ $entry['title'] }}</div>
+                                                                    @if ($entry['details'])
+                                                                        <div class="mt-1 truncate text-gray-500">{{ $entry['details'] }}</div>
+                                                                    @endif
+                                                                </div>
+                                                            @endforeach
+
+                                                            @if ($day['entries']->count() > 3)
+                                                                <div class="text-xs text-gray-500">
+                                                                    {{ __('+:count more', ['count' => $day['entries']->count() - 3]) }}
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            @endforeach
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <p class="mt-4 text-xs text-gray-500">

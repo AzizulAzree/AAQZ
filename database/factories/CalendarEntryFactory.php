@@ -15,13 +15,15 @@ class CalendarEntryFactory extends Factory
 
     public function definition(): array
     {
+        $faker = $this->faker ?? $this->withFaker();
+
         $date = CarbonImmutable::instance(
-            fake()->dateTimeBetween('-2 months', '+2 months'),
+            $faker->dateTimeBetween('-2 months', '+2 months'),
         )->startOfDay();
 
         return [
             'entry_date' => $date->toDateString(),
-            'title' => fake()->randomElement([
+            'title' => $faker->randomElement([
                 'Client check-in',
                 'Invoice follow-up',
                 'Content review',
@@ -31,7 +33,7 @@ class CalendarEntryFactory extends Factory
                 'Support backlog review',
                 'Weekly wrap-up',
             ]),
-            'details' => fake()->boolean(65) ? fake()->sentence() : null,
+            'details' => $faker->boolean(65) ? $faker->sentence() : null,
             'source_type' => null,
             'source_id' => null,
         ];
