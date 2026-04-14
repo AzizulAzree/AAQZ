@@ -57,9 +57,28 @@ class DatabaseInspector
             'name' => $tableOverview['name'],
             'row_count' => $tableOverview['row_count'],
             'metadata' => $tableOverview['metadata'],
+            'primary_key' => $details['primary_key'],
             'columns' => $details['columns'],
             'preview' => $this->previewRows($table, $details['primary_key'], $page),
         ];
+    }
+
+    public function deleteRow(string $table, mixed $primaryKeyValue): void
+    {
+        $tableDetails = $this->table($table);
+
+        if ($tableDetails['primary_key'] === null) {
+            throw new NotFoundHttpException("Table [{$table}] cannot be edited without a primary key.");
+        }
+
+        $deleted = DB::table($table)
+            ->where($tableDetails['primary_key'], $primaryKeyValue)
+            ->limit(1)
+            ->delete();
+
+        if ($deleted === 0) {
+            throw new NotFoundHttpException("Record [{$primaryKeyValue}] was not found in table [{$table}].");
+        }
     }
 
     private function sqliteTables(): array
@@ -234,9 +253,16 @@ class DatabaseInspector
         $rows = $query
             ->forPage($page, $this->previewPerPage)
             ->get()
-            ->map(fn (object $row): array => collect((array) $row)
-                ->map(fn ($value) => $this->normalizeValue($value))
-                ->all());
+            ->map(function (object $row) use ($primaryKey): array {
+                $raw = (array) $row;
+
+                return [
+                    'values' => collect($raw)
+                        ->map(fn ($value) => $this->normalizeValue($value))
+                        ->all(),
+                    'delete_key' => $primaryKey !== null ? ($raw[$primaryKey] ?? null) : null,
+                ];
+            });
 
         return new LengthAwarePaginator(
             items: $rows,

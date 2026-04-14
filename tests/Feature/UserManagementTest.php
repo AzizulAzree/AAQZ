@@ -34,13 +34,13 @@ class UserManagementTest extends TestCase
             ->get('/admin/users');
 
         $response->assertOk();
-        $response->assertSee('Admin');
+        $response->assertSee('Settings');
         $response->assertSee($managedUser->email);
     }
 
     public function test_authenticated_users_can_add_a_new_user(): void
     {
-        $adminUser = User::factory()->create();
+        $adminUser = User::factory()->create(['color' => '#3B82F6']);
 
         $response = $this
             ->actingAs($adminUser)
@@ -58,6 +58,13 @@ class UserManagementTest extends TestCase
             'name' => 'New User',
             'email' => 'new-user@example.com',
         ]);
+
+        $createdUser = User::query()->where('email', 'new-user@example.com')->first();
+
+        $this->assertNotNull($createdUser);
+        $this->assertNotNull($createdUser->color);
+        $this->assertNotSame($adminUser->color, $createdUser->color);
+        $this->assertSame('#3B82F6', $adminUser->fresh()->color);
     }
 
     public function test_user_creation_requires_a_unique_email(): void

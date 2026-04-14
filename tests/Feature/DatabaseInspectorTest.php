@@ -77,4 +77,59 @@ class DatabaseInspectorTest extends TestCase
         $response->assertSee('calendar_entries');
         $response->assertSee('A very long calendar entry title');
     }
+
+    public function test_admin_can_delete_a_record_from_the_data_browser(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'admin@example.com',
+        ]);
+
+        $entry = CalendarEntry::create([
+            'entry_date' => '2026-04-14',
+            'title' => 'Remove me',
+            'details' => 'This should be deleted from the browser.',
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->delete('/admin/database/calendar_entries', [
+                'record_key' => $entry->id,
+                'page' => 1,
+            ]);
+
+        $response->assertRedirect('/admin/database/calendar_entries?page=1');
+        $response->assertSessionHas('status', 'record-deleted');
+
+        $this->assertDatabaseMissing('calendar_entries', [
+            'id' => $entry->id,
+        ]);
+    }
+
+    public function test_non_admin_users_cannot_delete_a_record_from_the_data_browser(): void
+    {
+        User::factory()->create([
+            'email' => 'first@example.com',
+        ]);
+
+        $nonAdmin = User::factory()->create([
+            'email' => 'second@example.com',
+        ]);
+
+        $entry = CalendarEntry::create([
+            'entry_date' => '2026-04-14',
+            'title' => 'Keep me',
+        ]);
+
+        $response = $this
+            ->actingAs($nonAdmin)
+            ->delete('/admin/database/calendar_entries', [
+                'record_key' => $entry->id,
+            ]);
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('calendar_entries', [
+            'id' => $entry->id,
+        ]);
+    }
 }

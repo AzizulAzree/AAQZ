@@ -36,7 +36,7 @@ Each user has a unique saved color on their account.
 - Users can pick their own color from the Profile page.
 - The app prevents two users from saving the same color.
 - The selected color is used across the site to represent the owner, including calendar entries and account markers in the navigation and settings screens.
-- Existing users are given unique default colors when the color migration runs, and new users receive a unique color automatically if one is not provided.
+- Existing users keep their current account data unchanged, and new users receive a unique color automatically if one is not provided.
 
 ### Calendar Entries Table
 

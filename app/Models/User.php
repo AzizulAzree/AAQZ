@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
 
 #[Fillable(['name', 'email', 'password', 'color'])]
 #[Hidden(['password', 'remember_token'])]
@@ -21,6 +22,10 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::creating(function (self $user): void {
+            if (! Schema::hasColumn($user->getTable(), 'color')) {
+                return;
+            }
+
             $user->color = UserColor::normalize($user->color)
                 ?? UserColor::generateUnique(
                     static::query()->whereNotNull('color')->pluck('color')->all(),
