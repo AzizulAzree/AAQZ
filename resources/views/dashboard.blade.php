@@ -27,6 +27,8 @@
                     selectedEntry: null,
                     selectedDay: null,
                     selectedDayEntries: [],
+                    createEntryDate: @js(old('entry_date', $createEntryDate)),
+                    createEntryLabel: @js(old('entry_date_label', $createEntryLabel)),
                     showEntryModal(entry) {
                         this.selectedDay = null;
                         this.selectedDayEntries = [];
@@ -39,10 +41,26 @@
                         this.selectedDayEntries = entries;
                         $dispatch('open-modal', 'calendar-day-details');
                     },
+                    showCreateModal(date, label) {
+                        this.createEntryDate = date;
+                        this.createEntryLabel = label;
+                        $dispatch('open-modal', 'calendar-entry-create');
+                    },
                 }"
+                x-init="
+                    @if ($errors->hasBag('default') && old('entry_date'))
+                        $dispatch('open-modal', 'calendar-entry-create');
+                    @endif
+                "
                 class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
             >
                 <div class="p-6">
+                    @if (session('status') === 'calendar-entry-created')
+                        <p class="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                            {{ __('Entry added to your calendar.') }}
+                        </p>
+                    @endif
+
                     <div class="flex items-center justify-between gap-4">
                         <a
                             href="{{ route('dashboard', ['month' => $calendar->previousMonthQuery()]) }}"
@@ -85,11 +103,17 @@
                                                 >
                                                     <div class="h-40 p-3">
                                                         <div class="flex items-center justify-between gap-2">
-                                                            <span
-                                                                class="{{ $day['is_today'] ? 'bg-gray-900 text-white' : ($day['is_current_month'] ? 'text-gray-900' : 'text-gray-400') }} inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
+                                                            <button
+                                                                type="button"
+                                                                x-on:click="showCreateModal(
+                                                                    @js($day['date']->toDateString()),
+                                                                    @js($day['date']->isoFormat('dddd, D MMMM YYYY'))
+                                                                )"
+                                                                class="inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition hover:bg-gray-100 {{ $day['is_today'] ? 'bg-gray-900 text-white hover:bg-gray-800' : ($day['is_current_month'] ? 'text-gray-900' : 'text-gray-400') }}"
+                                                                title="{{ __('Add something for this date') }}"
                                                             >
                                                                 {{ $day['date']->day }}
-                                                            </span>
+                                                            </button>
                                                             @if ($day['entries']->isNotEmpty())
                                                                 <span class="text-xs text-gray-400">
                                                                     {{ trans_choice('{1} :count item|[2,*] :count items', $day['entries']->count(), ['count' => $day['entries']->count()]) }}
@@ -102,6 +126,7 @@
                                                                 <button
                                                                     type="button"
                                                                     x-on:click="showEntryModal(@js([
+                                                                        'id' => $entry['id'],
                                                                         'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
                                                                         'title' => $entry['title'],
                                                                         'details' => $entry['details'],
@@ -122,6 +147,7 @@
                                                                         @js($day['date']->isoFormat('dddd, D MMMM YYYY')),
                                                                         @js(
                                                                             $day['entries']->map(fn ($entry) => [
+                                                                                'id' => $entry['id'],
                                                                                 'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
                                                                                 'title' => $entry['title'],
                                                                                 'details' => $entry['details'],
@@ -185,6 +211,65 @@
                     </div>
                 </x-modal>
 
+                <x-modal name="calendar-entry-create" maxWidth="lg">
+                    <div class="p-6">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">{{ __('Add to') }}</p>
+                                <h3 class="mt-1 text-lg font-semibold text-gray-900" x-text="createEntryLabel || '{{ __('Selected date') }}'"></h3>
+                            </div>
+                            <button
+                                type="button"
+                                x-on:click="$dispatch('close-modal', 'calendar-entry-create')"
+                                class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                            >
+                                {{ __('Close') }}
+                            </button>
+                        </div>
+
+                        <form method="POST" action="{{ route('dashboard.entries.store') }}" class="mt-6 space-y-4">
+                            @csrf
+
+                            <input type="hidden" name="entry_date" :value="createEntryDate">
+                            <input type="hidden" name="entry_date_label" :value="createEntryLabel">
+                            <input type="hidden" name="month" value="{{ $selectedMonthQuery }}">
+
+                            <div>
+                                <x-input-label for="calendar-entry-title" :value="__('Title')" />
+                                <x-text-input
+                                    id="calendar-entry-title"
+                                    name="title"
+                                    type="text"
+                                    class="mt-1 block w-full"
+                                    :value="old('title')"
+                                    required
+                                    maxlength="255"
+                                    autocomplete="off"
+                                />
+                                <x-input-error class="mt-2" :messages="$errors->get('title')" />
+                            </div>
+
+                            <div>
+                                <x-input-label for="calendar-entry-details-field" :value="__('Details')" />
+                                <textarea
+                                    id="calendar-entry-details-field"
+                                    name="details"
+                                    rows="4"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500"
+                                >{{ old('details') }}</textarea>
+                                <x-input-error class="mt-2" :messages="$errors->get('details')" />
+                            </div>
+
+                            <x-input-error class="mt-2" :messages="$errors->get('entry_date')" />
+
+                            <div class="flex items-center gap-3">
+                                <x-primary-button>{{ __('Save entry') }}</x-primary-button>
+                                <p class="text-xs text-gray-500">{{ __('This will be linked to your account automatically.') }}</p>
+                            </div>
+                        </form>
+                    </div>
+                </x-modal>
+
                 <x-modal name="calendar-day-details" maxWidth="2xl">
                     <div class="p-6">
                         <div class="flex items-start justify-between gap-4">
@@ -202,7 +287,7 @@
                         </div>
 
                         <div class="mt-6 space-y-3">
-                            <template x-for="entry in selectedDayEntries" :key="`${entry.date}-${entry.title}`">
+                            <template x-for="entry in selectedDayEntries" :key="entry.id">
                                 <button
                                     type="button"
                                     x-on:click="selectedEntry = entry; $dispatch('close-modal', 'calendar-day-details'); $dispatch('open-modal', 'calendar-entry-details')"

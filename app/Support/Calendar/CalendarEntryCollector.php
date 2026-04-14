@@ -31,6 +31,7 @@ class CalendarEntryCollector
             ->get()
             ->map(function (CalendarEntry $entry): array {
                 return [
+                    'id' => $entry->id,
                     'date' => CarbonImmutable::instance($entry->entry_date),
                     'title' => $entry->title,
                     'details' => $entry->details,
