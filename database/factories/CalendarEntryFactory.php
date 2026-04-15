@@ -39,6 +39,8 @@ class CalendarEntryFactory extends Factory
             'entry_date' => $date->toDateString(),
             'title' => $titles[array_rand($titles)],
             'details' => $details[array_rand($details)],
+            'follow_up_enabled' => false,
+            'follow_up_days' => null,
             'source_type' => null,
             'source_id' => null,
         ];

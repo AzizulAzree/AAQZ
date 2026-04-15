@@ -15,6 +15,8 @@ class CalendarEntry extends Model
         'entry_date',
         'title',
         'details',
+        'follow_up_enabled',
+        'follow_up_days',
         'source_type',
         'source_id',
     ];
@@ -23,6 +25,8 @@ class CalendarEntry extends Model
     {
         return [
             'entry_date' => 'immutable_date',
+            'follow_up_enabled' => 'boolean',
+            'follow_up_days' => 'integer',
             'source_id' => 'integer',
         ];
     }

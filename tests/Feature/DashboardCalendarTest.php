@@ -116,6 +116,8 @@ class DashboardCalendarTest extends TestCase
         $this->assertNotNull($entry);
         $this->assertSame('2026-04-14', $entry->entry_date->toDateString());
         $this->assertSame('Bring previous lab results.', $entry->details);
+        $this->assertFalse($entry->follow_up_enabled);
+        $this->assertNull($entry->follow_up_days);
         $this->assertSame('self', $entry->source_type);
         $this->assertSame($user->id, $entry->source_id);
     }
@@ -204,5 +206,72 @@ class DashboardCalendarTest extends TestCase
         } finally {
             CarbonImmutable::setTestNow();
         }
+    }
+
+    public function test_authenticated_user_can_add_calendar_entry_with_follow_up_settings(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->post('/dashboard/entries', [
+                'entry_date' => '2026-04-14',
+                'title' => 'Client recap',
+                'details' => 'Send the summary and next steps.',
+                'follow_up_enabled' => '1',
+                'follow_up_days' => '4',
+                'month' => '2026-04',
+            ]);
+
+        $response->assertRedirect('/dashboard?month=2026-04');
+
+        $entry = CalendarEntry::query()
+            ->where('title', 'Client recap')
+            ->first();
+
+        $this->assertNotNull($entry);
+        $this->assertTrue($entry->follow_up_enabled);
+        $this->assertSame(4, $entry->follow_up_days);
+    }
+
+    public function test_follow_up_days_are_required_when_follow_up_is_enabled(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->from('/dashboard?month=2026-04')
+            ->actingAs($user)
+            ->post('/dashboard/entries', [
+                'entry_date' => '2026-04-14',
+                'title' => 'Missing follow-up day value',
+                'follow_up_enabled' => '1',
+                'month' => '2026-04',
+            ]);
+
+        $response->assertRedirect('/dashboard?month=2026-04');
+        $response->assertSessionHasErrors(['follow_up_days']);
+    }
+
+    public function test_follow_up_entries_appear_on_the_future_calendar_day_with_tag(): void
+    {
+        $user = User::factory()->create(['color' => '#3B82F6']);
+
+        CalendarEntry::create([
+            'entry_date' => '2026-04-10',
+            'title' => 'Invoice review',
+            'details' => 'Need to check for client reply.',
+            'follow_up_enabled' => true,
+            'follow_up_days' => 2,
+            'source_type' => 'self',
+            'source_id' => $user->id,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get('/dashboard?month=2026-04');
+
+        $response->assertOk();
+        $response->assertSee('Invoice review');
+        $response->assertSee('Follow Up');
     }
 }

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\CalendarEntry;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 
@@ -13,6 +14,7 @@ class CalendarEntrySeeder extends Seeder
         CalendarEntry::query()->delete();
 
         $today = CarbonImmutable::today();
+        $defaultOwnerId = User::query()->orderBy('id')->value('id');
 
         $entries = [
             [
@@ -123,13 +125,17 @@ class CalendarEntrySeeder extends Seeder
         ];
 
         foreach ($entries as $entry) {
+            $followUpEnabled = in_array($entry['title'], ['Production deployment', 'Metrics snapshot', 'Homepage copy polish'], true);
+
             CalendarEntry::factory()
                 ->onDate($entry['entry_date'])
                 ->create([
                     'title' => $entry['title'],
                     'details' => $entry['details'],
-                    'source_type' => null,
-                    'source_id' => null,
+                    'follow_up_enabled' => $followUpEnabled,
+                    'follow_up_days' => $followUpEnabled ? 2 : null,
+                    'source_type' => $defaultOwnerId ? 'self' : null,
+                    'source_id' => $defaultOwnerId,
                 ]);
         }
 
@@ -137,6 +143,10 @@ class CalendarEntrySeeder extends Seeder
             'entry_date' => $today->startOfMonth()->setDay(14)->toDateString(),
             'title' => 'Debug calendar density check',
             'details' => 'Intentional cluster of entries on one day to test stacked dashboard summaries.',
+            'follow_up_enabled' => false,
+            'follow_up_days' => null,
+            'source_type' => $defaultOwnerId ? 'self' : null,
+            'source_id' => $defaultOwnerId,
         ]);
     }
 }

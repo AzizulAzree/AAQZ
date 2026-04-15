@@ -46,6 +46,8 @@ class DashboardController extends Controller
             'createEntryLabel' => $createEntryDate
                 ? CarbonImmutable::parse($createEntryDate)->isoFormat('dddd, D MMMM YYYY')
                 : null,
+            'createFollowUpEnabled' => (bool) old('follow_up_enabled', false),
+            'createFollowUpDays' => old('follow_up_days'),
         ]);
     }
 
@@ -55,6 +57,8 @@ class DashboardController extends Controller
             'entry_date' => $request->date('entry_date')->toDateString(),
             'title' => $request->string('title')->toString(),
             'details' => $request->filled('details') ? $request->string('details')->toString() : null,
+            'follow_up_enabled' => $request->boolean('follow_up_enabled'),
+            'follow_up_days' => $request->boolean('follow_up_enabled') ? $request->integer('follow_up_days') : null,
             'source_type' => 'self',
             'source_id' => $request->user()->id,
         ]);

@@ -26,7 +26,14 @@ class CalendarEntryCollector
     private function manualEntriesForRange(CarbonImmutable $start, CarbonImmutable $end): Collection
     {
         $entries = CalendarEntry::query()
-            ->whereBetween('entry_date', [$start->toDateString(), $end->toDateString()])
+            ->where(function ($query) use ($start, $end): void {
+                $query->whereBetween('entry_date', [$start->toDateString(), $end->toDateString()])
+                    ->orWhere(function ($followUpQuery): void {
+                        $followUpQuery
+                            ->where('follow_up_enabled', true)
+                            ->whereNotNull('follow_up_days');
+                    });
+            })
             ->orderBy('entry_date')
             ->orderBy('title')
             ->get();
@@ -41,16 +48,19 @@ class CalendarEntryCollector
             ->keyBy('id');
 
         return $entries
-            ->map(function (CalendarEntry $entry) use ($owners): array {
+            ->flatMap(function (CalendarEntry $entry) use ($owners, $start, $end): array {
                 $owner = $entry->source_type === 'self' && $entry->source_id !== null
                     ? $owners->get($entry->source_id)
                     : null;
 
-                return [
+                $baseEntry = [
                     'id' => $entry->id,
                     'date' => CarbonImmutable::instance($entry->entry_date),
                     'title' => $entry->title,
                     'details' => $entry->details,
+                    'is_follow_up' => false,
+                    'follow_up_enabled' => (bool) $entry->follow_up_enabled,
+                    'follow_up_days' => $entry->follow_up_days,
                     'source_type' => $entry->source_type,
                     'source_id' => $entry->source_id,
                     'owner_name' => $owner?->name,
@@ -58,7 +68,31 @@ class CalendarEntryCollector
                     'created_at' => $entry->created_at?->toImmutable(),
                     'updated_at' => $entry->updated_at?->toImmutable(),
                     'model' => $entry,
+                    'tag' => null,
                 ];
-            });
+
+                $items = [];
+
+                if ($baseEntry['date']->betweenIncluded($start, $end)) {
+                    $items[] = $baseEntry;
+                }
+
+                if ($entry->follow_up_enabled && $entry->follow_up_days !== null) {
+                    $followUpDate = CarbonImmutable::instance($entry->entry_date)->addDays($entry->follow_up_days);
+
+                    if ($followUpDate->betweenIncluded($start, $end)) {
+                        $items[] = [
+                            ...$baseEntry,
+                            'id' => 'follow-up-'.$entry->id.'-'.$followUpDate->toDateString(),
+                            'date' => $followUpDate,
+                            'is_follow_up' => true,
+                            'tag' => 'Follow Up',
+                        ];
+                    }
+                }
+
+                return $items;
+            })
+            ->values();
     }
 }

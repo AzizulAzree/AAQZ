@@ -14,9 +14,67 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div
+            x-data="{
+                selectedEntry: null,
+                selectedDay: null,
+                selectedDayEntries: [],
+                createEntryDate: @js(old('entry_date', $createEntryDate)),
+                createEntryLabel: @js(old('entry_date_label', $createEntryLabel)),
+                createFollowUpEnabled: @js($createFollowUpEnabled),
+                createFollowUpDays: @js($createFollowUpDays),
+                rgba(color, alpha) {
+                    if (! color || ! color.startsWith('#')) {
+                        return '';
+                    }
+
+                    const normalized = color.length === 4
+                        ? `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`
+                        : color;
+
+                    const hex = normalized.slice(1);
+
+                    if (hex.length !== 6) {
+                        return '';
+                    }
+
+                    const r = Number.parseInt(hex.slice(0, 2), 16);
+                    const g = Number.parseInt(hex.slice(2, 4), 16);
+                    const b = Number.parseInt(hex.slice(4, 6), 16);
+
+                    if ([r, g, b].some(Number.isNaN)) {
+                        return '';
+                    }
+
+                    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                },
+                showEntryModal(entry) {
+                    this.selectedDay = null;
+                    this.selectedDayEntries = [];
+                    this.selectedEntry = entry;
+                    $dispatch('open-modal', 'calendar-entry-details');
+                },
+                showDayModal(dayLabel, entries) {
+                    this.selectedEntry = null;
+                    this.selectedDay = dayLabel;
+                    this.selectedDayEntries = entries;
+                    $dispatch('open-modal', 'calendar-day-details');
+                },
+                showCreateModal(date, label) {
+                    this.createEntryDate = date;
+                    this.createEntryLabel = label;
+                    $dispatch('open-modal', 'calendar-entry-create');
+                },
+            }"
+            x-init="
+                @if ($errors->hasBag('default') && old('entry_date'))
+                    $dispatch('open-modal', 'calendar-entry-create');
+                @endif
+            "
+            class="max-w-7xl mx-auto space-y-6 sm:px-6 lg:px-8"
+        >
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-4 text-gray-900">
+                <div class="reminder-panel text-gray-900">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <div class="inline-flex items-center gap-2 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-500">
@@ -35,24 +93,26 @@
 
                     <div class="mt-4 grid gap-3 lg:grid-cols-3">
                         @foreach ($reminderDays as $reminderDay)
-                            <section class="rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 px-3.5 py-3.5 shadow-sm">
+                            <section class="reminder-day-card">
                                 <div class="flex items-start justify-between gap-3">
                                     <div>
-                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">{{ $reminderDay['label'] }}</p>
-                                        <p class="mt-1 text-sm font-semibold text-gray-900">{{ $reminderDay['date']->isoFormat('D MMM') }}</p>
+                                        <p
+                                            class="reminder-day-label"
+                                            data-kind="{{ in_array($reminderDay['label'], ['Today', 'Tomorrow'], true) ? 'priority' : 'default' }}"
+                                        >
+                                            {{ $reminderDay['label'] }}
+                                        </p>
+                                        <p class="reminder-day-date">{{ $reminderDay['date']->isoFormat('ddd, D MMM') }}</p>
                                     </div>
                                     <span class="rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-gray-500 ring-1 ring-gray-200">
                                         {{ trans_choice('{0} Open|{1} :count item|[2,*] :count items', $reminderDay['entries']->count(), ['count' => $reminderDay['entries']->count()]) }}
                                     </span>
                                 </div>
 
-                                <div class="mt-3 space-y-2">
-                                    @forelse ($reminderDay['entries']->take(3) as $entry)
+                                <div class="reminder-list">
+                                    @forelse ($reminderDay['entries']->take(4) as $entry)
                                         <button
                                             type="button"
-                                            x-data="{ hovered: false }"
-                                            x-on:mouseenter="hovered = true"
-                                            x-on:mouseleave="hovered = false"
                                             x-on:click="showEntryModal(@js([
                                                 'id' => $entry['id'],
                                                 'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
@@ -62,27 +122,39 @@
                                                 'source_id' => $entry['source_id'],
                                                 'owner_name' => $entry['owner_name'],
                                                 'owner_color' => $entry['owner_color'],
+                                                'is_follow_up' => $entry['is_follow_up'],
+                                                'follow_up_enabled' => $entry['follow_up_enabled'],
+                                                'follow_up_days' => $entry['follow_up_days'],
+                                                'tag' => $entry['tag'],
                                                 'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
                                                 'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
                                             ]))"
-                                            class="flex w-full items-center gap-2 truncate rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-left text-xs font-medium text-gray-700 transition duration-150 hover:shadow-sm"
+                                            class="reminder-list-item"
                                             title="{{ $entry['details'] ?: __('Open this entry to see more information.') }}"
-                                            @if ($entry['owner_color'])
-                                                x-bind:style="'background-color: ' + (hovered ? rgba('{{ $entry['owner_color'] }}', 0.12) : '#ffffff')"
-                                            @endif
+                                            x-bind:style="`--reminder-dot: {{ $entry['owner_color'] ?: '#94A3B8' }}; --reminder-dot-soft: ${rgba('{{ $entry['owner_color'] ?: '#94A3B8' }}', 0.22)};`"
                                         >
-                                            @if ($entry['owner_color'])
-                                                <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $entry['owner_color'] }}"></span>
-                                            @endif
-                                            <span class="truncate">{{ $entry['title'] }}</span>
+                                            <span class="reminder-list-dot"></span>
+                                            <span class="reminder-list-content">
+                                                <span class="reminder-list-title">
+                                                    {{ $entry['title'] }}
+                                                    @if ($entry['is_follow_up'])
+                                                        <span class="entry-tag">{{ __('Follow Up') }}</span>
+                                                    @endif
+                                                </span>
+                                                @if ($entry['details'])
+                                                    <span class="reminder-list-meta">
+                                                        <span class="truncate">{{ \Illuminate\Support\Str::limit($entry['details'], 48) }}</span>
+                                                    </span>
+                                                @endif
+                                            </span>
                                         </button>
                                     @empty
-                                        <div class="rounded-2xl border border-dashed border-gray-200 bg-white/80 px-3 py-3 text-xs text-gray-400">
+                                        <div class="reminder-empty">
                                             {{ __('Nothing lined up here yet.') }}
                                         </div>
                                     @endforelse
 
-                                    @if ($reminderDay['entries']->count() > 3)
+                                    @if ($reminderDay['entries']->count() > 4)
                                         <button
                                             type="button"
                                             x-on:click="showDayModal(
@@ -97,14 +169,18 @@
                                                         'source_id' => $entry['source_id'],
                                                         'owner_name' => $entry['owner_name'],
                                                         'owner_color' => $entry['owner_color'],
+                                                        'is_follow_up' => $entry['is_follow_up'],
+                                                        'follow_up_enabled' => $entry['follow_up_enabled'],
+                                                        'follow_up_days' => $entry['follow_up_days'],
+                                                        'tag' => $entry['tag'],
                                                         'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
                                                         'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
                                                     ])->values()
                                                 )
                                             )"
-                                            class="text-xs font-medium text-rose-500 hover:text-rose-600"
+                                            class="calendar-entry-more text-xs font-medium"
                                         >
-                                            {{ __('+:count more', ['count' => $reminderDay['entries']->count() - 3]) }}
+                                            {{ __('+:count more', ['count' => $reminderDay['entries']->count() - 4]) }}
                                         </button>
                                     @endif
                                 </div>
@@ -114,63 +190,7 @@
                 </div>
             </div>
 
-            <div
-                x-data="{
-                    selectedEntry: null,
-                    selectedDay: null,
-                    selectedDayEntries: [],
-                    createEntryDate: @js(old('entry_date', $createEntryDate)),
-                    createEntryLabel: @js(old('entry_date_label', $createEntryLabel)),
-                    rgba(color, alpha) {
-                        if (! color || ! color.startsWith('#')) {
-                            return '';
-                        }
-
-                        const normalized = color.length === 4
-                            ? `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`
-                            : color;
-
-                        const hex = normalized.slice(1);
-
-                        if (hex.length !== 6) {
-                            return '';
-                        }
-
-                        const r = Number.parseInt(hex.slice(0, 2), 16);
-                        const g = Number.parseInt(hex.slice(2, 4), 16);
-                        const b = Number.parseInt(hex.slice(4, 6), 16);
-
-                        if ([r, g, b].some(Number.isNaN)) {
-                            return '';
-                        }
-
-                        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                    },
-                    showEntryModal(entry) {
-                        this.selectedDay = null;
-                        this.selectedDayEntries = [];
-                        this.selectedEntry = entry;
-                        $dispatch('open-modal', 'calendar-entry-details');
-                    },
-                    showDayModal(dayLabel, entries) {
-                        this.selectedEntry = null;
-                        this.selectedDay = dayLabel;
-                        this.selectedDayEntries = entries;
-                        $dispatch('open-modal', 'calendar-day-details');
-                    },
-                    showCreateModal(date, label) {
-                        this.createEntryDate = date;
-                        this.createEntryLabel = label;
-                        $dispatch('open-modal', 'calendar-entry-create');
-                    },
-                }"
-                x-init="
-                    @if ($errors->hasBag('default') && old('entry_date'))
-                        $dispatch('open-modal', 'calendar-entry-create');
-                    @endif
-                "
-                class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
-            >
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6">
                     @if (session('status') === 'calendar-entry-created')
                         <p class="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
@@ -200,11 +220,11 @@
                     </div>
 
                     <div class="mt-6 overflow-hidden rounded-lg border border-gray-200 bg-gray-200">
-                            <table data-calendar-grid class="min-w-full table-fixed border-separate border-spacing-px bg-gray-200">
+                            <table data-calendar-grid class="calendar-grid min-w-full border-separate border-spacing-px bg-gray-200">
                                 <thead>
                                     <tr>
                                         @foreach ($calendar->weekdayLabels as $weekday)
-                                            <th scope="col" class="bg-gray-50 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                            <th scope="col" class="bg-gray-50 px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">
                                                 {{ $weekday }}
                                             </th>
                                         @endforeach
@@ -218,8 +238,8 @@
                                                     data-date="{{ $day['date']->toDateString() }}"
                                                     class="{{ $day['is_current_month'] ? 'bg-white' : 'bg-gray-50' }} w-1/7"
                                                 >
-                                                    <div class="h-40 p-3">
-                                                        <div class="flex items-center justify-between gap-2">
+                                                    <div class="calendar-day-cell">
+                                                        <div class="calendar-day-meta flex items-start justify-between gap-2">
                                                             <button
                                                                 type="button"
                                                                 x-on:click="showCreateModal(
@@ -232,14 +252,14 @@
                                                                 {{ $day['date']->day }}
                                                             </button>
                                                             @if ($day['entries']->isNotEmpty())
-                                                                <span class="text-xs text-gray-400">
+                                                                <span class="calendar-day-count text-[11px] text-gray-400">
                                                                     {{ trans_choice('{1} :count item|[2,*] :count items', $day['entries']->count(), ['count' => $day['entries']->count()]) }}
                                                                 </span>
                                                             @endif
                                                         </div>
 
-                                                        <div class="mt-3 space-y-1.5">
-                                                            @foreach ($day['entries']->take(3) as $entry)
+                                                        <div class="calendar-entry-stack">
+                                                            @foreach ($day['entries']->take(2) as $entry)
                                                                 <button
                                                                     type="button"
                                                                     x-data="{ hovered: false }"
@@ -254,23 +274,27 @@
                                                                         'source_id' => $entry['source_id'],
                                                                         'owner_name' => $entry['owner_name'],
                                                                         'owner_color' => $entry['owner_color'],
+                                                                        'is_follow_up' => $entry['is_follow_up'],
+                                                                        'follow_up_enabled' => $entry['follow_up_enabled'],
+                                                                        'follow_up_days' => $entry['follow_up_days'],
+                                                                        'tag' => $entry['tag'],
                                                                         'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
                                                                         'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
                                                                     ]))"
-                                                                    class="flex w-full items-center gap-2 truncate rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-left text-xs font-medium text-gray-700 transition duration-150 hover:shadow-sm"
+                                                                    class="calendar-entry-pill block w-full text-left transition duration-150"
                                                                     title="{{ $entry['details'] ?: __('Open this entry to see more information.') }}"
-                                                                    @if ($entry['owner_color'])
-                                                                        x-bind:style="'background-color: ' + (hovered ? rgba('{{ $entry['owner_color'] }}', 0.12) : '#ffffff')"
-                                                                    @endif
+                                                                    x-bind:style="`--calendar-entry-accent: {{ $entry['owner_color'] ?: '#8B5CF6' }}; --calendar-entry-surface: ${rgba('{{ $entry['owner_color'] ?: '#8B5CF6' }}', hovered ? 0.22 : 0.14)};`"
                                                                 >
-                                                                    @if ($entry['owner_color'])
-                                                                        <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $entry['owner_color'] }}"></span>
-                                                                    @endif
-                                                                    <span class="truncate">{{ $entry['title'] }}</span>
+                                                                    <span class="calendar-entry-pill-label">
+                                                                        <span>{{ $entry['title'] }}</span>
+                                                                        @if ($entry['is_follow_up'])
+                                                                            <span class="entry-tag">{{ __('Follow Up') }}</span>
+                                                                        @endif
+                                                                    </span>
                                                                 </button>
                                                             @endforeach
 
-                                                            @if ($day['entries']->count() > 3)
+                                                            @if ($day['entries']->count() > 2)
                                                                 <button
                                                                     type="button"
                                                                     x-on:click="showDayModal(
@@ -285,14 +309,18 @@
                                                                                 'source_id' => $entry['source_id'],
                                                                                 'owner_name' => $entry['owner_name'],
                                                                                 'owner_color' => $entry['owner_color'],
+                                                                                'is_follow_up' => $entry['is_follow_up'],
+                                                                                'follow_up_enabled' => $entry['follow_up_enabled'],
+                                                                                'follow_up_days' => $entry['follow_up_days'],
+                                                                                'tag' => $entry['tag'],
                                                                                 'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
                                                                                 'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
                                                                             ])->values()
                                                                         )
                                                                     )"
-                                                                    class="text-xs font-medium text-gray-500 hover:text-gray-700"
+                                                                    class="calendar-entry-more text-xs font-medium"
                                                                 >
-                                                                    {{ __('+:count more', ['count' => $day['entries']->count() - 3]) }}
+                                                                    {{ __('+:count more', ['count' => $day['entries']->count() - 2]) }}
                                                                 </button>
                                                             @endif
                                                         </div>
@@ -315,7 +343,10 @@
                         <div class="flex items-start justify-between gap-4">
                             <div>
                                 <p class="text-sm text-gray-500" x-text="selectedEntry?.date"></p>
-                                <h3 class="mt-1 text-lg font-semibold text-gray-900" x-text="selectedEntry?.title"></h3>
+                                <div class="mt-1 flex flex-wrap items-center gap-2">
+                                    <h3 class="text-lg font-semibold text-gray-900" x-text="selectedEntry?.title"></h3>
+                                    <span class="entry-tag" x-show="selectedEntry?.is_follow_up">{{ __('Follow Up') }}</span>
+                                </div>
                                 <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
                                     <div class="flex items-center gap-1.5" x-show="selectedEntry?.owner_color" :title="selectedEntry?.owner_name || '{{ __('Owner') }}'">
                                         <span
@@ -331,6 +362,11 @@
                                     <span x-show="selectedEntry?.updated_at && selectedEntry?.updated_at !== selectedEntry?.created_at">
                                         {{ __('Updated') }}
                                         <span x-text="selectedEntry?.updated_at"></span>
+                                    </span>
+                                    <span x-show="selectedEntry?.follow_up_enabled && ! selectedEntry?.is_follow_up">
+                                        {{ __('Follow-up in') }}
+                                        <span x-text="selectedEntry?.follow_up_days"></span>
+                                        {{ __('day(s)') }}
                                     </span>
                                 </div>
                             </div>
@@ -409,6 +445,37 @@
                                 <x-input-error class="mt-2" :messages="$errors->get('details')" />
                             </div>
 
+                            <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
+                                <label class="flex items-start gap-3">
+                                    <input
+                                        x-model="createFollowUpEnabled"
+                                        type="checkbox"
+                                        name="follow_up_enabled"
+                                        value="1"
+                                        class="mt-1 rounded border-gray-300 text-rose-500 shadow-sm focus:ring-rose-500"
+                                    />
+                                    <span>
+                                        <span class="block text-sm font-medium text-gray-900">{{ __('Add follow-up reminder') }}</span>
+                                        <span class="mt-1 block text-xs text-gray-500">{{ __('Show a follow-up copy of this entry after the number of days you choose.') }}</span>
+                                    </span>
+                                </label>
+
+                                <div class="mt-4 max-w-xs" x-show="createFollowUpEnabled" x-cloak>
+                                    <x-input-label for="calendar-entry-follow-up-days" :value="__('Remind me after (days)')" />
+                                    <x-text-input
+                                        x-model="createFollowUpDays"
+                                        id="calendar-entry-follow-up-days"
+                                        name="follow_up_days"
+                                        type="number"
+                                        min="1"
+                                        max="30"
+                                        class="mt-1 block w-full"
+                                        :value="$createFollowUpDays"
+                                    />
+                                    <x-input-error class="mt-2" :messages="$errors->get('follow_up_days')" />
+                                </div>
+                            </div>
+
                             <x-input-error class="mt-2" :messages="$errors->get('entry_date')" />
 
                             <div class="flex items-center gap-3">
@@ -453,7 +520,10 @@
                                             :style="entry.owner_color ? `background-color: ${entry.owner_color}` : ''"
                                             x-show="entry.owner_color"
                                         ></span>
-                                        <div class="truncate text-sm font-medium text-gray-900" x-text="entry.title"></div>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <div class="truncate text-sm font-medium text-gray-900" x-text="entry.title"></div>
+                                            <span class="entry-tag" x-show="entry.is_follow_up">{{ __('Follow Up') }}</span>
+                                        </div>
                                     </div>
                                     <div class="mt-1 truncate text-xs text-gray-500" x-text="entry.details || '{{ __('No additional details for this entry.') }}'"></div>
                                 </button>
