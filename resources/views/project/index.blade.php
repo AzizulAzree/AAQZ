@@ -62,8 +62,8 @@
 
                 echo '<div id="'.$folderId.'" x-show="open || actionsOpen" x-transition.opacity.duration.150ms class="project-folder-body">';
                 echo '<div class="project-folder-inline-menu" x-show="actionsOpen" x-transition.opacity.duration.150ms x-cloak>';
-                echo '<button type="button" class="project-folder-inline-action" x-on:click="actionsOpen = false; window.dispatchEvent(new CustomEvent(\'project-open-node-modal\', { detail: { type: \'folder\', workspaceId: '.$workspaceId.', parentId: '.$node['id'].', parentName: '.json_encode($node['name'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT).' } }))">'.e(__('New folder')).'</button>';
-                echo '<button type="button" class="project-folder-inline-action" x-on:click="actionsOpen = false; window.dispatchEvent(new CustomEvent(\'project-open-node-modal\', { detail: { type: \'shortcut\', workspaceId: '.$workspaceId.', parentId: '.$node['id'].', parentName: '.json_encode($node['name'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT).' } }))">'.e(__('New shortcut')).'</button>';
+                echo '<button type="button" class="project-folder-inline-action" x-on:click=\'actionsOpen = false; window.dispatchEvent(new CustomEvent("project-open-node-modal", { detail: { type: "folder", workspaceId: '.$workspaceId.', parentId: '.$node['id'].', parentName: '.json_encode($node['name'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT).' } }))\'>'.e(__('New folder')).'</button>';
+                echo '<button type="button" class="project-folder-inline-action" x-on:click=\'actionsOpen = false; window.dispatchEvent(new CustomEvent("project-open-node-modal", { detail: { type: "shortcut", workspaceId: '.$workspaceId.', parentId: '.$node['id'].', parentName: '.json_encode($node['name'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT).' } }))\'>'.e(__('New shortcut')).'</button>';
                 echo '</div>';
                 if (! empty($children)) {
                     echo '<ul class="project-tree-list">';
