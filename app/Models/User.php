@@ -8,6 +8,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Schema;
@@ -57,5 +58,15 @@ class User extends Authenticatable
     public function ownerColor(): string
     {
         return UserColor::normalize($this->color) ?? '#3B82F6';
+    }
+
+    public function workspaces(): HasMany
+    {
+        return $this->hasMany(Workspace::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function recentShortcuts(): HasMany
+    {
+        return $this->hasMany(RecentShortcut::class)->latest('opened_at');
     }
 }
