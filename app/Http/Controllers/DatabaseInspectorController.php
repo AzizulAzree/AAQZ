@@ -39,4 +39,30 @@ class DatabaseInspectorController extends Controller
             ]))
             ->with('status', 'record-deleted');
     }
+
+    public function update(string $table, Request $request, DatabaseInspector $inspector): RedirectResponse
+    {
+        $request->validate([
+            'record_key' => ['required'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'values' => ['nullable', 'array'],
+            'values.*' => ['nullable', 'string'],
+            'null_columns' => ['nullable', 'array'],
+            'null_columns.*' => ['string'],
+        ]);
+
+        $inspector->updateRow(
+            $table,
+            $request->input('record_key'),
+            $request->input('values', []),
+            $request->input('null_columns', []),
+        );
+
+        return redirect()
+            ->route('database.show', array_filter([
+                'table' => $table,
+                'page' => $request->integer('page', 1),
+            ]))
+            ->with('status', 'record-updated');
+    }
 }

@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/users', [UserManagementController::class, 'store'])->name('users.store');
         Route::get('/admin/database', [DatabaseInspectorController::class, 'index'])->name('database.index');
         Route::get('/admin/database/{table}', [DatabaseInspectorController::class, 'show'])->name('database.show');
+        Route::put('/admin/database/{table}', [DatabaseInspectorController::class, 'update'])->name('database.update');
         Route::delete('/admin/database/{table}', [DatabaseInspectorController::class, 'destroy'])->name('database.destroy');
     });
 });

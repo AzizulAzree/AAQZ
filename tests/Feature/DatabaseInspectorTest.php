@@ -105,6 +105,45 @@ class DatabaseInspectorTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_update_a_record_from_the_data_browser(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'admin@example.com',
+        ]);
+
+        $entry = CalendarEntry::create([
+            'entry_date' => '2026-04-14',
+            'title' => 'Original title',
+            'details' => 'Original details',
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->put('/admin/database/calendar_entries', [
+                'record_key' => $entry->id,
+                'page' => 1,
+                'values' => [
+                    'entry_date' => '2026-04-18',
+                    'title' => 'Updated title',
+                    'details' => 'Updated details',
+                    'follow_up_enabled' => '1',
+                    'follow_up_days' => '3',
+                    'source_type' => 'calendar_entry',
+                    'source_id' => '12',
+                ],
+            ]);
+
+        $response->assertRedirect('/admin/database/calendar_entries?page=1');
+        $response->assertSessionHas('status', 'record-updated');
+
+        $this->assertDatabaseHas('calendar_entries', [
+            'id' => $entry->id,
+            'title' => 'Updated title',
+            'details' => 'Updated details',
+            'follow_up_days' => 3,
+        ]);
+    }
+
     public function test_non_admin_users_cannot_delete_a_record_from_the_data_browser(): void
     {
         User::factory()->create([
@@ -130,6 +169,38 @@ class DatabaseInspectorTest extends TestCase
 
         $this->assertDatabaseHas('calendar_entries', [
             'id' => $entry->id,
+        ]);
+    }
+
+    public function test_non_admin_users_cannot_update_a_record_from_the_data_browser(): void
+    {
+        User::factory()->create([
+            'email' => 'first@example.com',
+        ]);
+
+        $nonAdmin = User::factory()->create([
+            'email' => 'second@example.com',
+        ]);
+
+        $entry = CalendarEntry::create([
+            'entry_date' => '2026-04-14',
+            'title' => 'Keep title',
+        ]);
+
+        $response = $this
+            ->actingAs($nonAdmin)
+            ->put('/admin/database/calendar_entries', [
+                'record_key' => $entry->id,
+                'values' => [
+                    'title' => 'Should not update',
+                ],
+            ]);
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('calendar_entries', [
+            'id' => $entry->id,
+            'title' => 'Keep title',
         ]);
     }
 }

@@ -81,6 +81,44 @@ class DatabaseInspector
         }
     }
 
+    public function updateRow(string $table, mixed $primaryKeyValue, array $values, array $nullColumns = []): void
+    {
+        $tableDetails = $this->table($table);
+
+        if ($tableDetails['primary_key'] === null) {
+            throw new NotFoundHttpException("Table [{$table}] cannot be edited without a primary key.");
+        }
+
+        $editableColumns = collect($tableDetails['columns'])
+            ->reject(fn (array $column) => $column['name'] === $tableDetails['primary_key']);
+
+        $updates = $editableColumns
+            ->filter(fn (array $column) => array_key_exists($column['name'], $values) || in_array($column['name'], $nullColumns, true))
+            ->mapWithKeys(function (array $column) use ($values, $nullColumns): array {
+                $name = $column['name'];
+
+                if (in_array($name, $nullColumns, true) && $column['nullable']) {
+                    return [$name => null];
+                }
+
+                return [$name => $values[$name] ?? null];
+            })
+            ->all();
+
+        if ($updates === []) {
+            return;
+        }
+
+        $updated = DB::table($table)
+            ->where($tableDetails['primary_key'], $primaryKeyValue)
+            ->limit(1)
+            ->update($updates);
+
+        if ($updated === 0 && ! DB::table($table)->where($tableDetails['primary_key'], $primaryKeyValue)->exists()) {
+            throw new NotFoundHttpException("Record [{$primaryKeyValue}] was not found in table [{$table}].");
+        }
+    }
+
     private function sqliteTables(): array
     {
         $tables = collect(DB::select(<<<'SQL'
@@ -260,6 +298,9 @@ class DatabaseInspector
                     'values' => collect($raw)
                         ->map(fn ($value) => $this->normalizeValue($value))
                         ->all(),
+                    'raw_values' => collect($raw)
+                        ->map(fn ($value) => $this->editableValue($value))
+                        ->all(),
                     'delete_key' => $primaryKey !== null ? ($raw[$primaryKey] ?? null) : null,
                 ];
             });
@@ -291,5 +332,22 @@ class DatabaseInspector
         }
 
         return Str::limit(json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[unprintable]', 80);
+    }
+
+    private function editableValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: null;
     }
 }

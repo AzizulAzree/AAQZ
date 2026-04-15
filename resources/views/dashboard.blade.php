@@ -381,7 +381,7 @@
 
                         <div class="mt-5 space-y-4 text-sm text-gray-700">
                             <div class="rounded-2xl bg-gray-50 px-4 py-4">
-                                <p class="leading-6 text-gray-600" x-text="selectedEntry?.details || '{{ __('No additional details for this entry.') }}'"></p>
+                                <p class="whitespace-pre-line leading-6 text-gray-600" x-text="selectedEntry?.details || '{{ __('No additional details for this entry.') }}'"></p>
                             </div>
 
                             <template x-if="selectedEntry?.source_type && selectedEntry.source_type !== 'self'">

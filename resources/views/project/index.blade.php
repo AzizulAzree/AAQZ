@@ -161,12 +161,15 @@
                             @else
                                 <div class="project-workspace-grid">
                                     @foreach ($workspaces as $workspace)
-                                        <section class="project-tree-board">
+                                        <section x-data="{ open: false }" class="project-tree-board">
                                             <div class="project-tree-toolbar">
-                                                <div>
-                                                    <p class="project-tree-label">{{ __('Workspace') }}</p>
-                                                    <p class="project-tree-name">{{ $workspace['name'] }}</p>
-                                                </div>
+                                                <button type="button" class="project-workspace-toggle" x-on:click="open = ! open" x-bind:aria-expanded="open.toString()">
+                                                    <span class="project-workspace-toggle-copy">
+                                                        <span class="project-tree-label">{{ __('Workspace') }}</span>
+                                                        <span class="project-tree-name">{{ $workspace['name'] }}</span>
+                                                    </span>
+                                                    <span class="project-workspace-toggle-icon" x-bind:class="open ? 'project-workspace-toggle-icon-open' : ''" aria-hidden="true">&#8250;</span>
+                                                </button>
                                                 <div class="project-tree-toolbar-actions">
                                                     <p class="project-tree-hint">
                                                         {{ trans_choice('{1} :count folder|[2,*] :count folders', $workspace['folder_count'], ['count' => $workspace['folder_count']]) }}
@@ -182,15 +185,17 @@
                                                 </div>
                                             </div>
 
-                                            @if (count($workspace['folders']) === 0)
-                                                <div class="project-folder-empty mt-4">
-                                                    {{ __('No folders yet. Add a folder to start organizing your links.') }}
-                                                </div>
-                                            @else
-                                                <ul class="project-tree-list">
-                                                    {!! $renderTree($workspace['folders'], $workspace['id']) !!}
-                                                </ul>
-                                            @endif
+                                            <div x-show="open" x-transition.opacity.duration.150ms>
+                                                @if (count($workspace['folders']) === 0)
+                                                    <div class="project-folder-empty mt-4">
+                                                        {{ __('No folders yet. Add a folder to start organizing your links.') }}
+                                                    </div>
+                                                @else
+                                                    <ul class="project-tree-list">
+                                                        {!! $renderTree($workspace['folders'], $workspace['id']) !!}
+                                                    </ul>
+                                                @endif
+                                            </div>
                                         </section>
                                     @endforeach
                                 </div>
