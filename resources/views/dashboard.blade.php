@@ -17,24 +17,32 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-4 text-gray-900">
-                    <div class="flex items-center justify-between gap-4">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <h3 class="text-sm font-semibold text-gray-900">{{ __('Coming up next') }}</h3>
-                            <p class="mt-1 text-xs text-gray-500">{{ __('A quick look at the next three days, starting today.') }}</p>
+                            <div class="inline-flex items-center gap-2 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-500">
+                                <span class="h-2 w-2 rounded-full bg-rose-400"></span>
+                                {{ __('Reminder') }}
+                            </div>
+                            <h3 class="mt-3 text-base font-semibold text-gray-900">{{ __('The next few days at a glance') }}</h3>
+                            <p class="mt-1 text-xs text-gray-500">{{ __('Stay on top of what needs your attention today and over the next two days.') }}</p>
                         </div>
-                        <div class="text-xs text-gray-400">{{ __('Personal reminders') }}</div>
+                        <div class="flex items-center gap-2 text-xs text-gray-400">
+                            <span class="rounded-full border border-gray-200 px-2.5 py-1">
+                                {{ trans_choice('{0} No plans yet|{1} :count reminder|[2,*] :count reminders', collect($reminderDays)->sum(fn ($day) => $day['entries']->count()), ['count' => collect($reminderDays)->sum(fn ($day) => $day['entries']->count())]) }}
+                            </span>
+                        </div>
                     </div>
 
-                    <div class="mt-4 grid gap-3 md:grid-cols-3">
+                    <div class="mt-4 grid gap-3 lg:grid-cols-3">
                         @foreach ($reminderDays as $reminderDay)
-                            <section class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
+                            <section class="rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 px-3.5 py-3.5 shadow-sm">
                                 <div class="flex items-start justify-between gap-3">
                                     <div>
-                                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $reminderDay['label'] }}</p>
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">{{ $reminderDay['label'] }}</p>
                                         <p class="mt-1 text-sm font-semibold text-gray-900">{{ $reminderDay['date']->isoFormat('D MMM') }}</p>
                                     </div>
-                                    <span class="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-gray-500">
-                                        {{ trans_choice('{0} Free|{1} :count plan|[2,*] :count plans', $reminderDay['entries']->count(), ['count' => $reminderDay['entries']->count()]) }}
+                                    <span class="rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-gray-500 ring-1 ring-gray-200">
+                                        {{ trans_choice('{0} Open|{1} :count item|[2,*] :count items', $reminderDay['entries']->count(), ['count' => $reminderDay['entries']->count()]) }}
                                     </span>
                                 </div>
 
@@ -60,23 +68,18 @@
                                             class="flex w-full items-center gap-2 truncate rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-left text-xs font-medium text-gray-700 transition duration-150 hover:shadow-sm"
                                             title="{{ $entry['details'] ?: __('Open this entry to see more information.') }}"
                                             @if ($entry['owner_color'])
-                                                x-bind:style="'border-color: {{ $entry['owner_color'] }}; background-color: ' + (hovered ? rgba('{{ $entry['owner_color'] }}', 0.12) : '#ffffff')"
+                                                x-bind:style="'background-color: ' + (hovered ? rgba('{{ $entry['owner_color'] }}', 0.12) : '#ffffff')"
                                             @endif
                                         >
                                             @if ($entry['owner_color'])
                                                 <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $entry['owner_color'] }}"></span>
                                             @endif
-                                            <span
-                                                class="truncate"
-                                                @if ($entry['owner_color'])
-                                                    style="color: {{ $entry['owner_color'] }}"
-                                                @endif
-                                            >
-                                                {{ $entry['title'] }}
-                                            </span>
+                                            <span class="truncate">{{ $entry['title'] }}</span>
                                         </button>
                                     @empty
-                                        <p class="text-xs text-gray-400">{{ __('No reminders yet.') }}</p>
+                                        <div class="rounded-2xl border border-dashed border-gray-200 bg-white/80 px-3 py-3 text-xs text-gray-400">
+                                            {{ __('Nothing lined up here yet.') }}
+                                        </div>
                                     @endforelse
 
                                     @if ($reminderDay['entries']->count() > 3)
@@ -99,7 +102,7 @@
                                                     ])->values()
                                                 )
                                             )"
-                                            class="text-xs font-medium text-gray-500 hover:text-gray-700"
+                                            class="text-xs font-medium text-rose-500 hover:text-rose-600"
                                         >
                                             {{ __('+:count more', ['count' => $reminderDay['entries']->count() - 3]) }}
                                         </button>
@@ -257,20 +260,13 @@
                                                                     class="flex w-full items-center gap-2 truncate rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-left text-xs font-medium text-gray-700 transition duration-150 hover:shadow-sm"
                                                                     title="{{ $entry['details'] ?: __('Open this entry to see more information.') }}"
                                                                     @if ($entry['owner_color'])
-                                                                        x-bind:style="'border-color: {{ $entry['owner_color'] }}; background-color: ' + (hovered ? rgba('{{ $entry['owner_color'] }}', 0.12) : '#ffffff')"
+                                                                        x-bind:style="'background-color: ' + (hovered ? rgba('{{ $entry['owner_color'] }}', 0.12) : '#ffffff')"
                                                                     @endif
                                                                 >
                                                                     @if ($entry['owner_color'])
                                                                         <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $entry['owner_color'] }}"></span>
                                                                     @endif
-                                                                    <span
-                                                                        class="truncate"
-                                                                        @if ($entry['owner_color'])
-                                                                            style="color: {{ $entry['owner_color'] }}"
-                                                                        @endif
-                                                                    >
-                                                                        {{ $entry['title'] }}
-                                                                    </span>
+                                                                    <span class="truncate">{{ $entry['title'] }}</span>
                                                                 </button>
                                                             @endforeach
 
@@ -320,6 +316,23 @@
                             <div>
                                 <p class="text-sm text-gray-500" x-text="selectedEntry?.date"></p>
                                 <h3 class="mt-1 text-lg font-semibold text-gray-900" x-text="selectedEntry?.title"></h3>
+                                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+                                    <div class="flex items-center gap-1.5" x-show="selectedEntry?.owner_color" :title="selectedEntry?.owner_name || '{{ __('Owner') }}'">
+                                        <span
+                                            class="h-2.5 w-2.5 rounded-full"
+                                            :style="selectedEntry?.owner_color ? `background-color: ${selectedEntry.owner_color}` : ''"
+                                        ></span>
+                                        <span class="sr-only" x-text="selectedEntry?.owner_name || '{{ __('Owner') }}'"></span>
+                                    </div>
+                                    <span x-show="selectedEntry?.created_at">
+                                        {{ __('Created') }}
+                                        <span x-text="selectedEntry?.created_at"></span>
+                                    </span>
+                                    <span x-show="selectedEntry?.updated_at && selectedEntry?.updated_at !== selectedEntry?.created_at">
+                                        {{ __('Updated') }}
+                                        <span x-text="selectedEntry?.updated_at"></span>
+                                    </span>
+                                </div>
                             </div>
                             <button
                                 type="button"
@@ -330,52 +343,19 @@
                             </button>
                         </div>
 
-                        <div class="mt-6 space-y-4 text-sm text-gray-700">
-                            <div>
-                                <p class="font-medium text-gray-900">{{ __('Details') }}</p>
-                                <p class="mt-1 text-gray-600" x-text="selectedEntry?.details || '{{ __('No additional details for this entry.') }}'"></p>
+                        <div class="mt-5 space-y-4 text-sm text-gray-700">
+                            <div class="rounded-2xl bg-gray-50 px-4 py-4">
+                                <p class="leading-6 text-gray-600" x-text="selectedEntry?.details || '{{ __('No additional details for this entry.') }}'"></p>
                             </div>
 
                             <template x-if="selectedEntry?.source_type && selectedEntry.source_type !== 'self'">
-                                <div>
-                                    <p class="font-medium text-gray-900">{{ __('Reference') }}</p>
-                                    <p class="mt-1 text-gray-600">
+                                <div class="border-t border-gray-100 pt-4 text-xs text-gray-400">
+                                    <p>
                                         <span x-text="selectedEntry?.source_type"></span>
                                         <span x-show="selectedEntry?.source_id">#<span x-text="selectedEntry?.source_id"></span></span>
                                     </p>
                                 </div>
                             </template>
-
-                            <template x-if="selectedEntry?.owner_name">
-                                <div>
-                                    <p class="font-medium text-gray-900">{{ __('Owner') }}</p>
-                                    <div class="mt-1 flex items-center gap-2 text-gray-600">
-                                        <span
-                                            class="h-3 w-3 rounded-full"
-                                            :style="selectedEntry?.owner_color ? `background-color: ${selectedEntry.owner_color}` : ''"
-                                        ></span>
-                                        <span x-text="selectedEntry?.owner_name"></span>
-                                    </div>
-                                </div>
-                            </template>
-
-                            <div>
-                                <p class="font-medium text-gray-900">{{ __('Record information') }}</p>
-                                <dl class="mt-2 space-y-2 text-gray-600">
-                                    <div class="flex items-start justify-between gap-4">
-                                        <dt class="font-medium text-gray-900">{{ __('Record ID') }}</dt>
-                                        <dd x-text="selectedEntry?.id"></dd>
-                                    </div>
-                                    <div class="flex items-start justify-between gap-4" x-show="selectedEntry?.created_at">
-                                        <dt class="font-medium text-gray-900">{{ __('Created') }}</dt>
-                                        <dd class="text-right" x-text="selectedEntry?.created_at"></dd>
-                                    </div>
-                                    <div class="flex items-start justify-between gap-4" x-show="selectedEntry?.updated_at">
-                                        <dt class="font-medium text-gray-900">{{ __('Last updated') }}</dt>
-                                        <dd class="text-right" x-text="selectedEntry?.updated_at"></dd>
-                                    </div>
-                                </dl>
-                            </div>
                         </div>
                     </div>
                 </x-modal>
@@ -459,9 +439,12 @@
                             <template x-for="entry in selectedDayEntries" :key="entry.id">
                                 <button
                                     type="button"
+                                    x-data="{ hovered: false }"
+                                    x-on:mouseenter="hovered = true"
+                                    x-on:mouseleave="hovered = false"
                                     x-on:click="selectedEntry = entry; $dispatch('close-modal', 'calendar-day-details'); $dispatch('open-modal', 'calendar-entry-details')"
                                     class="block w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-left hover:border-gray-300 hover:bg-gray-100"
-                                    :style="entry.owner_color ? `border-left: 4px solid ${entry.owner_color}` : ''"
+                                    :style="entry.owner_color ? `background-color: ${hovered ? rgba(entry.owner_color, 0.12) : '#f9fafb'}` : ''"
                                     :title="entry.details || '{{ __('Open this entry to see more information.') }}'"
                                 >
                                     <div class="flex items-center gap-2">
@@ -473,7 +456,6 @@
                                         <div class="truncate text-sm font-medium text-gray-900" x-text="entry.title"></div>
                                     </div>
                                     <div class="mt-1 truncate text-xs text-gray-500" x-text="entry.details || '{{ __('No additional details for this entry.') }}'"></div>
-                                    <div class="mt-1 text-xs text-gray-400" x-show="entry.owner_name" x-text="entry.owner_name"></div>
                                 </button>
                             </template>
                         </div>

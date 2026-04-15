@@ -56,7 +56,8 @@ class DashboardCalendarTest extends TestCase
         $response->assertSee('data-date="2026-04-10"', false);
         $response->assertDontSee('Out of month entry');
         $response->assertSee('Initial planning session');
-        $response->assertSee('Record information');
+        $response->assertSee('Created');
+        $response->assertSee('Updated');
         $response->assertSee('created_at', false);
         $response->assertSee('updated_at', false);
         $response->assertDontSee('Added here');
@@ -189,7 +190,8 @@ class DashboardCalendarTest extends TestCase
                 ->get('/dashboard?month=2026-04');
 
             $response->assertOk();
-            $response->assertSee('Coming up next');
+            $response->assertSee('Reminder');
+            $response->assertSee('The next few days at a glance');
             $response->assertSee('Today');
             $response->assertSee('Tomorrow');
             $response->assertSee('Thursday');
