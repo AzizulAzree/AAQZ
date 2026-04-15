@@ -22,7 +22,7 @@
             foreach ($nodes as $node) {
                 if (($node['type'] ?? 'folder') === 'shortcut') {
                     echo '<li class="project-tree-item" style="--project-depth: '.$depth.'">';
-                    echo '<a href="'.e($node['open_url']).'" class="project-shortcut">';
+                    echo '<a href="'.e($node['open_url']).'" class="project-shortcut" target="_blank" rel="noopener noreferrer">';
                     echo '<span class="project-shortcut-icon" aria-hidden="true">&#8599;</span>';
                     echo '<span class="project-shortcut-copy">';
                     echo '<span class="project-shortcut-title">'.e($node['name']).'</span>';
@@ -207,7 +207,7 @@
 
                         <div class="project-recent-list">
                             @forelse ($recentShortcuts as $shortcut)
-                                <a href="{{ $shortcut['open_url'] }}" class="project-recent-link">
+                                <a href="{{ $shortcut['open_url'] }}" class="project-recent-link" target="_blank" rel="noopener noreferrer">
                                     <span class="project-recent-link-title">{{ $shortcut['name'] }}</span>
                                     <span class="project-recent-link-context">{{ $shortcut['context'] }}</span>
                                 </a>
