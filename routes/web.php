@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DatabaseInspectorController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\StickyNoteController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,7 @@ Route::get('/', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/entries', [DashboardController::class, 'store'])->name('dashboard.entries.store');
+    Route::put('/sticky-note', [StickyNoteController::class, 'update'])->name('sticky-note.update');
     Route::get('/project', [ProjectController::class, 'index'])->name('project.index');
     Route::post('/project/workspaces', [ProjectController::class, 'storeWorkspace'])->name('project.workspaces.store');
     Route::post('/project/nodes', [ProjectController::class, 'storeNode'])->name('project.nodes.store');

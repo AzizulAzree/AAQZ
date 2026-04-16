@@ -98,11 +98,11 @@
                                     <div>
                                         <p
                                             class="reminder-day-label"
-                                            data-kind="{{ in_array($reminderDay['label'], ['Today', 'Tomorrow'], true) ? 'priority' : 'default' }}"
+                                            data-kind="{{ $reminderDay['label_kind'] ?? 'default' }}"
                                         >
                                             {{ $reminderDay['label'] }}
                                         </p>
-                                        <p class="reminder-day-date">{{ $reminderDay['date']->isoFormat('ddd, D MMM') }}</p>
+                                        <p class="reminder-day-date">{{ $reminderDay['date_display'] ?? $reminderDay['date']->isoFormat('ddd, D MMM') }}</p>
                                     </div>
                                     <span class="rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-gray-500 ring-1 ring-gray-200">
                                         {{ trans_choice('{0} Open|{1} :count item|[2,*] :count items', $reminderDay['entries']->count(), ['count' => $reminderDay['entries']->count()]) }}
@@ -150,7 +150,7 @@
                                         </button>
                                     @empty
                                         <div class="reminder-empty">
-                                            {{ __('Nothing lined up here yet.') }}
+                                            {{ $reminderDay['empty_message'] ?? __('Nothing lined up here yet.') }}
                                         </div>
                                     @endforelse
 
@@ -158,7 +158,7 @@
                                         <button
                                             type="button"
                                             x-on:click="showDayModal(
-                                                @js($reminderDay['date']->isoFormat('dddd, D MMMM YYYY')),
+                                                @js($reminderDay['modal_label'] ?? $reminderDay['date']->isoFormat('dddd, D MMMM YYYY')),
                                                 @js(
                                                     $reminderDay['entries']->map(fn ($entry) => [
                                                         'id' => $entry['id'],

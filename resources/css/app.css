@@ -2,7 +2,140 @@
 @tailwind components;
 @tailwind utilities;
 
+[x-cloak] {
+    display: none !important;
+}
+
 @layer components {
+    .sticky-note-shell {
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 60;
+        width: min(20rem, calc(100vw - 1.5rem));
+        touch-action: none;
+    }
+
+    .sticky-note-card {
+        overflow: hidden;
+        border-radius: 1.1rem;
+        border: 1px solid rgba(217, 119, 6, 0.28);
+        background:
+            linear-gradient(180deg, rgba(254, 249, 195, 0.98), rgba(253, 230, 138, 0.96));
+        box-shadow: 0 22px 45px -28px rgba(146, 64, 14, 0.42);
+        backdrop-filter: blur(10px);
+        background-image:
+            linear-gradient(180deg, rgba(254, 249, 195, 0.98), rgba(253, 230, 138, 0.96)),
+            linear-gradient(transparent 31px, rgba(180, 83, 9, 0.07) 32px);
+        background-size: 100% 100%, 100% 32px;
+    }
+
+    .sticky-note-card-collapsed {
+        width: min(18rem, calc(100vw - 1.5rem));
+    }
+
+    .sticky-note-card-dragging {
+        box-shadow: 0 28px 50px -24px rgba(146, 64, 14, 0.5);
+    }
+
+    .sticky-note-header {
+        display: flex;
+        cursor: grab;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.95rem 1rem 0.8rem;
+        position: relative;
+        overflow: visible;
+    }
+
+    .sticky-note-header:active {
+        cursor: grabbing;
+    }
+
+    .sticky-note-kicker {
+        font-family: 'Special Elite', 'Courier New', monospace;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: #92400e;
+    }
+
+    .sticky-note-status {
+        margin-top: 0.28rem;
+        font-family: 'Special Elite', 'Courier New', monospace;
+        font-size: 0.78rem;
+        color: rgba(120, 53, 15, 0.8);
+    }
+
+    .sticky-note-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        position: absolute;
+        right: -1.15rem;
+        top: -1rem;
+    }
+
+    .sticky-note-icon-button {
+        display: inline-flex;
+        height: 4.5rem;
+        width: 4.5rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        border: 0;
+        background: transparent;
+        color: #78350f;
+        transition: transform 150ms ease, filter 150ms ease;
+    }
+
+    .sticky-note-icon-button:hover {
+        transform: translateY(-2px) scale(1.03);
+        filter: drop-shadow(0 10px 14px rgba(120, 53, 15, 0.22));
+    }
+
+    .sticky-note-icon-image {
+        height: 4.5rem;
+        width: 4.5rem;
+        object-fit: contain;
+        pointer-events: none;
+    }
+
+    .sticky-note-body {
+        padding: 0 1rem 1rem;
+    }
+
+    .sticky-note-editor {
+        min-height: 15rem;
+        width: 100%;
+        resize: none;
+        border-radius: 0.95rem;
+        border: 1px solid rgba(146, 64, 14, 0.16);
+        background: rgba(255, 251, 235, 0.74);
+        padding: 0.95rem 1rem;
+        font-family: 'Caveat', 'Segoe Print', 'Bradley Hand', cursive;
+        font-size: 1.45rem;
+        font-weight: 600;
+        line-height: 1.35;
+        letter-spacing: 0.01em;
+        color: #451a03;
+        outline: none;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .sticky-note-editor::placeholder {
+        color: rgba(120, 53, 15, 0.58);
+    }
+
+    .sticky-note-editor:focus {
+        border-color: rgba(180, 83, 9, 0.42);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.6),
+            0 0 0 3px rgba(251, 191, 36, 0.16);
+    }
+
     .project-page-layout {
         display: grid;
         gap: 1rem;
@@ -677,6 +810,21 @@
     }
 
     @media (max-width: 1024px) {
+        .sticky-note-actions {
+            right: -0.75rem;
+            top: -0.8rem;
+        }
+
+        .sticky-note-icon-button,
+        .sticky-note-icon-image {
+            height: 4rem;
+            width: 4rem;
+        }
+
+        .sticky-note-shell {
+            width: min(18rem, calc(100vw - 1.25rem));
+        }
+
         .project-shell {
             padding: 1.2rem;
         }

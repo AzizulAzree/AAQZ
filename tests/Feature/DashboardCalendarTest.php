@@ -208,6 +208,115 @@ class DashboardCalendarTest extends TestCase
         }
     }
 
+    public function test_dashboard_collapses_empty_weekend_reminders_into_one_card(): void
+    {
+        CarbonImmutable::setTestNow('2026-04-17 09:00:00');
+
+        try {
+            $user = User::factory()->create(['color' => '#3B82F6']);
+
+            CalendarEntry::create([
+                'entry_date' => '2026-04-17',
+                'title' => 'Friday handoff',
+                'details' => 'Wrap up the final review.',
+                'source_type' => 'self',
+                'source_id' => $user->id,
+            ]);
+
+            $response = $this
+                ->actingAs($user)
+                ->get('/dashboard?month=2026-04');
+
+            $response->assertOk();
+            $response->assertSee('Today');
+            $response->assertSee('Weekend');
+            $response->assertSee('Fri, 17 Apr');
+            $response->assertSee('Sat, 18 Apr & Sun, 19 Apr');
+            $response->assertSee('Nothing lined up here.');
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
+    }
+
+    public function test_dashboard_labels_a_single_empty_weekend_day_as_weekend(): void
+    {
+        CarbonImmutable::setTestNow('2026-04-16 09:00:00');
+
+        try {
+            $user = User::factory()->create(['color' => '#3B82F6']);
+
+            CalendarEntry::create([
+                'entry_date' => '2026-04-16',
+                'title' => 'Thursday review',
+                'details' => 'Check the week before wrap-up.',
+                'source_type' => 'self',
+                'source_id' => $user->id,
+            ]);
+
+            CalendarEntry::create([
+                'entry_date' => '2026-04-17',
+                'title' => 'Friday planning',
+                'details' => 'Lock Monday priorities.',
+                'source_type' => 'self',
+                'source_id' => $user->id,
+            ]);
+
+            $response = $this
+                ->actingAs($user)
+                ->get('/dashboard?month=2026-04');
+
+            $response->assertOk();
+            $response->assertSee('Weekend');
+            $response->assertSee('Sat, 18 Apr & Sun, 19 Apr');
+            $response->assertSee('Nothing lined up here.');
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
+    }
+
+    public function test_dashboard_weekend_card_includes_entries_from_sunday_even_when_strip_ends_on_saturday(): void
+    {
+        CarbonImmutable::setTestNow('2026-04-16 09:00:00');
+
+        try {
+            $user = User::factory()->create(['color' => '#3B82F6']);
+
+            CalendarEntry::create([
+                'entry_date' => '2026-04-16',
+                'title' => 'Thursday review',
+                'source_type' => 'self',
+                'source_id' => $user->id,
+            ]);
+
+            CalendarEntry::create([
+                'entry_date' => '2026-04-17',
+                'title' => 'Friday planning',
+                'source_type' => 'self',
+                'source_id' => $user->id,
+            ]);
+
+            CalendarEntry::create([
+                'entry_date' => '2026-04-19',
+                'title' => 'Sunday catch-up',
+                'details' => 'Prep for Monday.',
+                'source_type' => 'self',
+                'source_id' => $user->id,
+            ]);
+
+            $response = $this
+                ->actingAs($user)
+                ->get('/dashboard?month=2026-04');
+
+            $response->assertOk();
+            $response->assertSee('Weekend');
+            $response->assertSee('Sat, 18 Apr & Sun, 19 Apr');
+            $response->assertSee('Sunday catch-up');
+            $response->assertSee('Prep for Monday.');
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
+    }
+
     public function test_authenticated_user_can_add_calendar_entry_with_follow_up_settings(): void
     {
         $user = User::factory()->create();
