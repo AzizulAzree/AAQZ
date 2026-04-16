@@ -1,55 +1,124 @@
 # AAQZ
 
-This is a private Laravel 13 application configured for lightweight, server-rendered authentication.
+AAQZ is a private Laravel 13 workspace app for keeping everyday planning in one place. It combines a calendar view for reminders and follow-ups, a project area for organizing workspaces and shortcuts, and a personal sticky note that follows the signed-in user across pages and devices.
 
-## Authentication Setup
+The app is designed around a simple idea: reduce context switching. Instead of spreading quick reminders, recurring follow-ups, bookmarked links, and admin tasks across several tools, AAQZ keeps them inside one authenticated interface.
+
+## App Overview
+
+AAQZ is currently built around three core areas:
+
+- `Calendar`: a monthly planning view with reminder summaries, quick entry creation, and follow-up support.
+- `Project`: a lightweight workspace organizer for folders, shortcuts, and recently opened links.
+- `Sticky note`: a draggable personal note that auto-saves and stays with the user across authenticated pages.
+
+The app uses server-rendered Laravel Blade views with Alpine.js for focused interactive behavior where needed.
+
+## Current Features
+
+### Private Access
+
+- Login-protected application with Laravel Breeze Blade authentication.
+- Public self-registration is disabled.
+- Guests are redirected to the login screen.
+- Signed-in users land in the authenticated workspace instead of a public homepage.
+
+### Calendar And Reminder Flow
+
+- Monthly calendar rendered in Blade without a heavy calendar package.
+- Sunday-to-Saturday calendar grid with previous and next month navigation.
+- Quick entry creation directly from a selected day.
+- Entry detail modals for reviewing saved notes and metadata.
+- Three-day reminder strip at the top of the dashboard.
+- Follow-up reminders that can automatically surface an entry again after a chosen number of days.
+- User color markers shown on entries and account surfaces for clear ownership.
+
+### Project Workspace Organizer
+
+- Create personal workspaces.
+- Add nested folders inside each workspace.
+- Add shortcuts inside folders.
+- Track recently opened shortcuts for quick return access.
+- Keep project links grouped in a cleaner, less cluttered structure than a traditional bookmarks list.
+
+### Sticky Note Prototype
+
+- Floating sticky note available across authenticated pages.
+- Draggable note position that persists for the user.
+- Auto-saving note content.
+- Collapse and expand interaction.
+- State stored in the database so the note follows the user across devices.
+
+### Settings And Admin Tools
+
+- User management screen for adding additional sign-in accounts.
+- Per-user color assignment and uniqueness enforcement.
+- Read-only style data browser for inspecting stored application data from the admin area.
+
+## Why This App Exists
+
+AAQZ is meant to support a small, private workflow rather than a public SaaS product. It fits best when the goal is:
+
+- keeping personal or shared planning lightweight
+- tracking upcoming tasks without opening a full project suite
+- storing quick-access links in a structured way
+- capturing temporary notes without losing them during page navigation
+
+## Future Planning
+
+The current version already covers the core workflow, but there are a few natural next steps for the app.
+
+### Product Direction
+
+- Turn sticky notes into a fuller notes system with multiple notes, colors, pinning, and archiving.
+- Let calendar entries connect directly to project workspaces or shortcuts.
+- Add filtering so users can view calendar items by owner, reminder type, or follow-up state.
+- Improve the reminder experience with overdue, upcoming, and completed states.
+
+### Collaboration Improvements
+
+- Shared workspaces for multiple users.
+- Shared project folders or team shortcut collections.
+- Team-visible notes or comments attached to a day, workspace, or link.
+- Role-based permissions beyond the current first-user admin model.
+
+### Quality Of Life
+
+- Search across shortcuts, workspaces, calendar entries, and notes.
+- Drag-and-drop organization in the project section.
+- Better mobile-specific sticky note behavior.
+- Richer note formatting for the sticky note or future note system.
+
+## Developer Documentation
+
+The sections below focus on local setup, database expectations, and implementation notes for development.
+
+### Authentication Setup
 
 Authentication was added with the official Laravel Breeze starter kit using the Blade stack. The app keeps the default `web` session guard and standard login/logout flow, with password reset routes left available because they are part of the starter kit.
 
 To keep the app private:
 
 - Public self-registration has been disabled by removing the `/register` routes.
-- The home page now redirects guests to `/login` and signed-in users to `/dashboard`.
+- The home page redirects guests to `/login` and signed-in users to `/dashboard`.
 - The main dashboard is protected by the `auth` middleware.
-- Email verification routes were removed because this single-user app does not need that extra flow.
+- Email verification routes were removed because this private app does not need that extra flow.
 
-## Dashboard Calendar
+### Calendar Notes
 
-The main dashboard now renders a lightweight monthly calendar in Blade with no heavy JavaScript calendar dependency.
+The dashboard calendar uses a dedicated collector so additional models can feed the calendar later without rewriting the main view.
 
-- Month calculations use `CarbonImmutable` so day, month, and year boundaries stay accurate.
-- The grid is aligned Sunday through Saturday and includes the leading and trailing days needed to complete each week row.
-- Previous and next month navigation is driven by the `month=YYYY-MM` query string.
-- The current day is highlighted automatically.
-- Small per-day summaries are shown from the `calendar_entries` table.
-- Clicking a date opens a modal form so signed-in users can add a new entry for that day.
-- Entries created from the dashboard are saved with `source_type=self` and `source_id` set to the signed-in user's id.
-- Self-owned entries show the owner's saved profile color in the calendar cards and entry detail views.
-
-Calendar entries currently come from the manual `calendar_entries` table, but the dashboard uses a dedicated collector so additional models can feed the calendar later without rewriting the view.
-
-## User Colors
-
-Each user has a unique saved color on their account.
-
-- The color is stored on the `users` table.
-- Users can pick their own color from the Profile page.
-- The app prevents two users from saving the same color.
-- The selected color is used across the site to represent the owner, including calendar entries and account markers in the navigation and settings screens.
-- Existing users keep their current account data unchanged, and new users receive a unique color automatically if one is not provided.
-
-### Calendar Entries Table
-
-The calendar uses a `calendar_entries` table with these fields:
+Calendar entries currently use the `calendar_entries` table with these main fields:
 
 - `entry_date`
 - `title`
 - `details` nullable
 - `source_type` nullable
 - `source_id` nullable
+- follow-up fields
 - timestamps
 
-Manual entries can be created in Tinker for now:
+Manual entries can be created in Tinker:
 
 ```bash
 php artisan tinker
@@ -63,15 +132,20 @@ php artisan tinker
 ]);
 ```
 
-For local debug data, run:
+### Sticky Note Notes
 
-```bash
-php artisan db:seed
-```
+Sticky note state is stored in the `sticky_notes` table and currently supports one note per user.
 
-That seeds realistic `calendar_entries` rows across past, current, and future months so the dashboard calendar has meaningful data to inspect, including a few busy days with multiple entries and many empty dates between them.
+The saved fields are:
 
-## Test User Login
+- `content`
+- `position_x`
+- `position_y`
+- `is_collapsed`
+
+This is intentionally a simple prototype-friendly structure that can be expanded later into a richer notes feature.
+
+### Test User Login
 
 When you run:
 
@@ -85,9 +159,7 @@ the app also creates a ready-to-use test account for local use:
 - Email: `test@example.com`
 - Password: `password`
 
-Use this account to sign in right away after migrating and seeding a local database.
-
-## Create The First User
+### Create The First User
 
 Use the custom Artisan command:
 
@@ -95,11 +167,11 @@ Use the custom Artisan command:
 php artisan app:create-user
 ```
 
-The command will prompt for the name, email address, and password, then create the user in the local database.
+The command prompts for the name, email address, and password, then creates the user in the local database.
 
 After signing in, open the Profile page to choose the color that should represent that user throughout the app.
 
-## Local Development With SQLite
+### Local Development With SQLite
 
 The app is set up for SQLite by default.
 
@@ -152,7 +224,7 @@ DB_CONNECTION=sqlite
 DB_DATABASE=database/database.sqlite
 ```
 
-## Production MariaDB Settings
+### Production MariaDB Settings
 
 For production, switch the database connection in `.env` to MariaDB and then run migrations against the production database:
 
@@ -181,9 +253,9 @@ npm run build
 
 Laravel's default migrations remain safe for MariaDB in production because they use framework schema abstractions rather than SQLite-only column features.
 
-## Commands Run For This Setup
+### Commands Used During Setup
 
-The auth setup used these commands:
+The initial auth setup used these commands:
 
 ```bash
 composer require laravel/breeze --dev
