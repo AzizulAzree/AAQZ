@@ -1,18 +1,4 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between gap-4">
-            <div>
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    {{ __('Calendar') }}
-                </h2>
-                <p class="mt-1 text-sm text-gray-500">{{ __('See upcoming plans and recent activity at a glance.') }}</p>
-            </div>
-            <div class="text-sm text-gray-500">
-                {{ __('Today: :date', ['date' => $calendar->today->isoFormat('ddd, D MMM YYYY')]) }}
-            </div>
-        </div>
-    </x-slot>
-
     <div class="py-12">
         <div
             x-data="{
@@ -219,7 +205,7 @@
                         </a>
                     </div>
 
-                    <div class="mt-6 overflow-hidden rounded-lg border border-gray-200 bg-gray-200">
+                    <div class="calendar-grid-wrap mt-6 overflow-hidden rounded-lg border border-gray-200 bg-gray-200">
                             <table data-calendar-grid class="calendar-grid min-w-full border-separate border-spacing-px bg-gray-200">
                                 <thead>
                                     <tr>
@@ -259,6 +245,36 @@
                                                         </div>
 
                                                         <div class="calendar-entry-stack">
+                                                            @if ($day['entries']->isNotEmpty())
+                                                                <button
+                                                                    type="button"
+                                                                    x-on:click="showDayModal(
+                                                                        @js($day['date']->isoFormat('dddd, D MMMM YYYY')),
+                                                                        @js(
+                                                                            $day['entries']->map(fn ($entry) => [
+                                                                                'id' => $entry['id'],
+                                                                                'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
+                                                                                'title' => $entry['title'],
+                                                                                'details' => $entry['details'],
+                                                                                'source_type' => $entry['source_type'],
+                                                                                'source_id' => $entry['source_id'],
+                                                                                'owner_name' => $entry['owner_name'],
+                                                                                'owner_color' => $entry['owner_color'],
+                                                                                'is_follow_up' => $entry['is_follow_up'],
+                                                                                'follow_up_enabled' => $entry['follow_up_enabled'],
+                                                                                'follow_up_days' => $entry['follow_up_days'],
+                                                                                'tag' => $entry['tag'],
+                                                                                'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
+                                                                                'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
+                                                                            ])->values()
+                                                                        )
+                                                                    )"
+                                                                    class="calendar-entry-mobile-summary"
+                                                                >
+                                                                    {{ $day['entries']->count() }}
+                                                                </button>
+                                                            @endif
+
                                                             @foreach ($day['entries']->take(2) as $entry)
                                                                 <button
                                                                     type="button"

@@ -712,6 +712,10 @@
         table-layout: fixed;
     }
 
+    .calendar-grid-wrap {
+        overflow: hidden;
+    }
+
     .calendar-grid th,
     .calendar-grid td {
         width: calc(100% / 7);
@@ -794,6 +798,10 @@
         overflow: hidden;
     }
 
+    .calendar-entry-mobile-summary {
+        display: none;
+    }
+
     .calendar-entry-more {
         display: inline-flex;
         align-items: center;
@@ -840,6 +848,103 @@
 
         .calendar-entry-pill-label {
             font-size: 0.72rem;
+        }
+    }
+
+    @media (max-width: 1024px) {
+        .reminder-panel {
+            border-radius: 1.2rem;
+            padding: 0.9rem;
+        }
+
+        .reminder-day-card {
+            border-radius: 1.1rem;
+            padding: 0.9rem;
+        }
+
+        .calendar-grid-wrap {
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .calendar-grid {
+            min-width: 39rem;
+        }
+
+        .calendar-grid th {
+            padding: 0.75rem 0.35rem;
+            font-size: 0.72rem;
+            letter-spacing: 0.12em;
+        }
+
+        .calendar-day-cell {
+            height: 7.6rem;
+            padding: 0.5rem 0.45rem 0.55rem;
+        }
+
+        .calendar-day-meta {
+            gap: 0.3rem;
+        }
+
+        .calendar-day-count {
+            display: none;
+            max-width: none;
+            font-size: 0.62rem;
+            line-height: 1.15;
+            letter-spacing: 0.02em;
+        }
+
+        .calendar-entry-stack {
+            margin-top: 0.5rem;
+            gap: 0.32rem;
+        }
+
+        .calendar-entry-mobile-summary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            align-self: flex-start;
+            border-radius: 9999px;
+            background: #fff1f2;
+            padding: 0.28rem 0.6rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #e11d48;
+            box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.08);
+        }
+
+        .calendar-entry-pill {
+            padding: 0.42rem 0.5rem 0.42rem 0.78rem;
+            border-radius: 0.8rem;
+        }
+
+        .calendar-entry-pill::before {
+            top: 0.14rem;
+            bottom: 0.14rem;
+            width: 0.26rem;
+        }
+
+        .calendar-entry-pill-label {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding-left: 0.05rem;
+            font-size: 0.72rem;
+            line-height: 1.2;
+        }
+
+        .calendar-entry-more {
+            padding: 0.2rem 0.55rem;
+            font-size: 0.68rem;
+        }
+
+        .calendar-entry-pill,
+        .calendar-entry-more {
+            display: none;
         }
     }
 

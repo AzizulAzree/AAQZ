@@ -1,20 +1,4 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between gap-4">
-            <div>
-                <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                    {{ __('Project') }}
-                </h2>
-                <p class="mt-1 text-sm text-gray-500">
-                    {{ __('Keep your workspaces, folders, and quick links in one place.') }}
-                </p>
-            </div>
-            <button type="button" class="project-primary-action" onclick="window.dispatchEvent(new CustomEvent('project-open-workspace-modal'))">
-                {{ __('+ Add workspace') }}
-            </button>
-        </div>
-    </x-slot>
-
     @php
         $folderCounter = 0;
 
@@ -129,6 +113,9 @@
                             </div>
 
                             <div class="project-shell-actions">
+                                <button type="button" class="project-primary-action" x-on:click="openWorkspaceModal()">
+                                    {{ __('+ Add workspace') }}
+                                </button>
                                 <div class="project-ghost-action">
                                     {{ trans_choice('{1} :count workspace|[2,*] :count workspaces', count($workspaces), ['count' => count($workspaces)]) }}
                                 </div>
