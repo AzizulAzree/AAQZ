@@ -8,4 +8,9 @@ script = ""
 [[actions]]
 name = "Run"
 icon = "run"
-command = "php -S 127.0.0.1:8080 -t public"
+command = '''
+Set-Location -LiteralPath 'C:/Users/User/Documents/AAQZ'
+npm run build
+if (Test-Path public/hot) { Remove-Item public/hot }
+php -S 127.0.0.1:8080 -t public
+'''
