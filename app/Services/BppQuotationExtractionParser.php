@@ -40,12 +40,12 @@ class BppQuotationExtractionParser
         $suppliers = $this->parseSectionTable(
             $lines,
             'SUPPLIERS:',
-            'supplier_name|total_price|delivery_period|validity_period|quotation_reference',
-            5,
+            'supplier_name|registration_number|supplier_address|total_price|delivery_period|validity_period|quotation_reference',
+            7,
             $errors,
             function (array $parts, int $index): array {
                 $supplierName = trim($parts[0]);
-                $totalPrice = $this->normalizedNumber($parts[1]);
+                $totalPrice = $this->normalizedNumber($parts[3]);
 
                 if ($supplierName === '') {
                     throw new \RuntimeException('Supplier row '.($index + 1).' is missing supplier_name.');
@@ -57,10 +57,67 @@ class BppQuotationExtractionParser
 
                 return [
                     'supplier_name' => $supplierName,
+                    'registration_number' => trim($parts[1]) !== '' ? trim($parts[1]) : null,
+                    'supplier_address' => trim($parts[2]) !== '' ? trim($parts[2]) : null,
                     'total_price' => $this->formattedNumber($totalPrice),
-                    'delivery_period' => trim($parts[2]),
-                    'validity_period' => trim($parts[3]),
-                    'quotation_reference' => trim($parts[4]) !== '' ? trim($parts[4]) : null,
+                    'delivery_period' => trim($parts[4]),
+                    'validity_period' => trim($parts[5]),
+                    'quotation_reference' => trim($parts[6]) !== '' ? trim($parts[6]) : null,
+                ];
+            }
+        );
+
+        $comparisonRows = $this->parseSectionTable(
+            $lines,
+            'SUPPLIER_COMPARISON_ITEMS:',
+            'line_number|item_spesifikasi|kuantiti|unit_ukuran|supplier_name|harga_tawaran|jumlah_harga',
+            7,
+            $errors,
+            function (array $parts, int $index): array {
+                $lineNumber = (int) trim($parts[0]);
+                $itemSpesifikasi = trim($parts[1]);
+                $kuantiti = $this->normalizedNumber($parts[2]);
+                $unitUkuran = trim($parts[3]);
+                $supplierName = trim($parts[4]);
+                $hargaTawaran = $this->normalizedNumber($parts[5]);
+                $jumlahHarga = $this->normalizedNumber($parts[6]);
+
+                if ($lineNumber <= 0) {
+                    throw new \RuntimeException('Comparison row '.($index + 1).' has an invalid line_number.');
+                }
+
+                if ($itemSpesifikasi === '') {
+                    throw new \RuntimeException('Comparison row '.($index + 1).' is missing item_spesifikasi.');
+                }
+
+                if ($kuantiti === null || $kuantiti <= 0) {
+                    throw new \RuntimeException('Comparison row '.($index + 1).' has an invalid kuantiti.');
+                }
+
+                if ($unitUkuran === '') {
+                    throw new \RuntimeException('Comparison row '.($index + 1).' is missing unit_ukuran.');
+                }
+
+                if ($supplierName === '') {
+                    throw new \RuntimeException('Comparison row '.($index + 1).' is missing supplier_name.');
+                }
+
+                if ($hargaTawaran === null) {
+                    throw new \RuntimeException('Comparison row '.($index + 1).' has an invalid harga_tawaran.');
+                }
+
+                if ($jumlahHarga === null) {
+                    throw new \RuntimeException('Comparison row '.($index + 1).' has an invalid jumlah_harga.');
+                }
+
+                return [
+                    'line_number' => $lineNumber,
+                    'item_spesifikasi' => $itemSpesifikasi,
+                    'kuantiti' => $this->formattedNumber($kuantiti),
+                    'unit_ukuran' => $unitUkuran,
+                    'supplier_name' => $supplierName,
+                    'harga_tawaran' => $this->formattedNumber($hargaTawaran),
+                    'jumlah_harga' => $this->formattedNumber($jumlahHarga),
                 ];
             }
         );
@@ -152,11 +209,43 @@ class BppQuotationExtractionParser
             $errors[] = 'SELECTED_SUPPLIER must match one supplier_name in the SUPPLIERS section.';
         }
 
+        if ($comparisonRows === []) {
+            $errors[] = 'At least one supplier comparison item row is required.';
+        }
+
         $supplierNames = collect($suppliers)->pluck('supplier_name');
 
         if ($supplierNames->count() !== $supplierNames->unique()->count()) {
             $errors[] = 'Supplier names must be unique in the SUPPLIERS section.';
         }
+
+        foreach ($comparisonRows as $comparisonRow) {
+            if (! $supplierNames->contains($comparisonRow['supplier_name'])) {
+                $errors[] = 'SUPPLIER_COMPARISON_ITEMS contains supplier_name "'.$comparisonRow['supplier_name'].'" that is not listed in SUPPLIERS.';
+            }
+        }
+
+        $comparisonGroupedRows = collect($comparisonRows)
+            ->groupBy('line_number')
+            ->map(function ($rows, $lineNumber) {
+                $firstRow = $rows->first();
+
+                return [
+                    'line_number' => (int) $lineNumber,
+                    'item_spesifikasi' => $firstRow['item_spesifikasi'],
+                    'kuantiti' => $firstRow['kuantiti'],
+                    'unit_ukuran' => $firstRow['unit_ukuran'],
+                    'supplier_prices' => $rows->mapWithKeys(fn (array $row): array => [
+                        $row['supplier_name'] => [
+                            'harga_tawaran' => $row['harga_tawaran'],
+                            'jumlah_harga' => $row['jumlah_harga'],
+                        ],
+                    ])->all(),
+                ];
+            })
+            ->sortBy('line_number')
+            ->values()
+            ->all();
 
         $calculatedTotal = array_reduce(
             $appendixRows,
@@ -184,6 +273,14 @@ class BppQuotationExtractionParser
         $warnings = [];
 
         foreach ($suppliers as $supplier) {
+            if ($supplier['registration_number'] === null) {
+                $warnings[] = 'Registration number is missing for '.$supplier['supplier_name'].'.';
+            }
+
+            if ($supplier['supplier_address'] === null) {
+                $warnings[] = 'Supplier address is missing for '.$supplier['supplier_name'].'.';
+            }
+
             if ($supplier['quotation_reference'] === null) {
                 $warnings[] = 'Quotation reference is missing for '.$supplier['supplier_name'].'.';
             }
@@ -208,6 +305,8 @@ class BppQuotationExtractionParser
                     ],
                     $suppliers
                 ),
+                'comparison_rows' => $comparisonRows,
+                'comparison_matrix_rows' => $comparisonGroupedRows,
                 'appendix_rows' => $appendixRows,
                 'totals' => [
                     'appendix_total' => $this->formattedNumber((float) $totals['appendix_total']),

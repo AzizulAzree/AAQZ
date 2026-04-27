@@ -33,6 +33,15 @@ class Bpp extends Model
         'b7_tajuk_asal_perolehan',
         'b8_tarikh_diperlukan',
         'b9_lokasi_diperlukan',
+        'b10_nilai_perolehan_terdahulu',
+        'b11_no_rujukan_perolehan_po_sst_terdahulu',
+        'b12_nilai_perolehan_2_tahun_lalu',
+        'b13_no_rujukan_perolehan_po_sst_2_tahun_lalu',
+        'b14_nilai_perolehan_alat',
+        'b15_no_rujukan_perolehan_po_sst_alat',
+        'b16_kepilkan_analisis_roi_rov',
+        'b17_rekod_senarai_pihak_pengguna',
+        'b18_salinan_laporan_kerosakan',
         'd_nama_pembekal',
         'd_alamat_pembekal',
         'd_no_pendaftaran_syarikat',
@@ -52,6 +61,12 @@ class Bpp extends Model
             'b4_harga_indikatif' => 'decimal:2',
             'b5_peruntukan_diluluskan' => 'decimal:2',
             'b8_tarikh_diperlukan' => 'date',
+            'b10_nilai_perolehan_terdahulu' => 'decimal:2',
+            'b12_nilai_perolehan_2_tahun_lalu' => 'decimal:2',
+            'b14_nilai_perolehan_alat' => 'decimal:2',
+            'b16_kepilkan_analisis_roi_rov' => 'boolean',
+            'b17_rekod_senarai_pihak_pengguna' => 'boolean',
+            'b18_salinan_laporan_kerosakan' => 'boolean',
             'quotation_extraction_review' => 'array',
         ];
     }
@@ -73,6 +88,11 @@ class Bpp extends Model
     public function supplierQuotes(): HasMany
     {
         return $this->hasMany(BppSupplierQuote::class)->latest();
+    }
+
+    public function supplierQuoteItems(): HasMany
+    {
+        return $this->hasMany(BppSupplierQuoteItem::class)->orderBy('line_number');
     }
 
     public static function appendixTypeForCategory(?string $category): ?string
@@ -157,11 +177,20 @@ class Bpp extends Model
             return;
         }
 
+        $existingCriteria = $this->selectedCriteriaOptions();
+        $defaultCriteria = array_values(array_filter([
+            $this->selectionReasonLabel(),
+        ]));
+
         $this->updateQuietly([
             'd_nama_pembekal' => $selectedQuote->supplier_name,
-            'd_kriteria_pemilihan' => $this->selectionReasonLabel(),
-            'd_lain_lain_kriteria' => $this->c1_selection_reason === 'Lain-lain'
-                ? $this->c1_selection_reason_lain_lain
+            'd_alamat_pembekal' => $selectedQuote->supplier_address,
+            'd_no_pendaftaran_syarikat' => $selectedQuote->registration_number,
+            'd_kriteria_pemilihan' => $this->formatSelectedCriteria(
+                $existingCriteria !== [] ? $existingCriteria : $defaultCriteria
+            ),
+            'd_lain_lain_kriteria' => $this->shouldKeepLainLainCriteria($existingCriteria)
+                ? ($this->d_lain_lain_kriteria ?: $this->c1_selection_reason_lain_lain)
                 : null,
         ]);
     }
@@ -170,6 +199,8 @@ class Bpp extends Model
     {
         $this->updateQuietly([
             'd_nama_pembekal' => null,
+            'd_alamat_pembekal' => null,
+            'd_no_pendaftaran_syarikat' => null,
             'd_kriteria_pemilihan' => null,
             'd_lain_lain_kriteria' => null,
         ]);
@@ -197,6 +228,43 @@ class Bpp extends Model
         return $this->c1_selection_reason;
     }
 
+    public function selectedCriteriaOptions(): array
+    {
+        $rawValue = trim((string) $this->d_kriteria_pemilihan);
+
+        if ($rawValue === '') {
+            return [];
+        }
+
+        $values = preg_split('/\r\n|\r|\n|\|/', $rawValue) ?: [];
+
+        return array_values(array_filter(array_map(
+            static fn (string $value): string => trim($value),
+            $values
+        )));
+    }
+
+    public function formatSelectedCriteria(array $criteria): ?string
+    {
+        $allowed = $this->selectionReasonOptions();
+
+        $filtered = array_values(array_unique(array_filter(
+            array_map(static fn (mixed $value): string => trim((string) $value), $criteria),
+            static fn (string $value) => in_array($value, $allowed, true)
+        )));
+
+        if ($filtered === []) {
+            return null;
+        }
+
+        return implode("\n", $filtered);
+    }
+
+    private function shouldKeepLainLainCriteria(array $criteria): bool
+    {
+        return in_array('Lain-lain', $criteria !== [] ? $criteria : [$this->selectionReasonLabel()], true);
+    }
+
     public function procurementMethodOptions(): array
     {
         return [
@@ -213,6 +281,14 @@ class Bpp extends Model
         $options = $this->procurementMethodOptions();
 
         return $options[$this->kaedah_perolehan] ?? null;
+    }
+
+    public function requiresBiiSection(): bool
+    {
+        return in_array($this->kaedah_perolehan, [
+            'tender',
+            'pembekal_tunggal_rundingan_terus',
+        ], true);
     }
 
     public function displayCurrency(float|string|null $amount): ?string

@@ -7,6 +7,7 @@ use App\Models\BppAppendixRow;
 use App\Models\BppSupplierQuote;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use setasign\Fpdi\Fpdi;
 use Tests\TestCase;
 
 class BppTest extends TestCase
@@ -172,6 +173,57 @@ class BppTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Tender (melebihi RM500,000.00)');
+    }
+
+    public function test_bii_section_is_shown_for_tender_and_rundingan_terus_methods(): void
+    {
+        $user = User::factory()->create();
+
+        $tenderBpp = Bpp::query()->create([
+            'title' => 'Tender draft',
+            'status' => 'draft',
+            'kaedah_perolehan' => 'tender',
+        ]);
+
+        $tenderResponse = $this
+            ->actingAs($user)
+            ->get(route('bpp.show', $tenderBpp));
+
+        $tenderResponse->assertOk();
+        $tenderResponse->assertSee('B(II) Maklumat Tambahan');
+        $tenderResponse->assertSee('B10. Nilai perolehan terdahulu');
+
+        $rundinganBpp = Bpp::query()->create([
+            'title' => 'Rundingan draft',
+            'status' => 'draft',
+            'kaedah_perolehan' => 'pembekal_tunggal_rundingan_terus',
+        ]);
+
+        $rundinganResponse = $this
+            ->actingAs($user)
+            ->get(route('bpp.show', $rundinganBpp));
+
+        $rundinganResponse->assertOk();
+        $rundinganResponse->assertSee('B(II) Maklumat Tambahan');
+    }
+
+    public function test_bii_section_is_hidden_for_other_procurement_methods(): void
+    {
+        $user = User::factory()->create();
+
+        $bpp = Bpp::query()->create([
+            'title' => 'Direct purchase draft',
+            'status' => 'draft',
+            'kaedah_perolehan' => 'pembelian_terus',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('bpp.show', $bpp));
+
+        $response->assertOk();
+        $response->assertDontSee('B(II) Maklumat Tambahan');
+        $response->assertDontSee('B10. Nilai perolehan terdahulu');
     }
 
     public function test_matching_appendix_editor_is_shown_for_bekalan_category(): void
@@ -365,6 +417,8 @@ class BppTest extends TestCase
             ->actingAs($user)
             ->post(route('bpp.supplier-quotes.store', $bpp), [
                 'supplier_name' => 'Alpha Supplies Sdn. Bhd.',
+                'registration_number' => '003495679-P',
+                'supplier_address' => 'No. 13, Jalan Nova U5/52, Subang Bestari',
                 'total_price' => '12500.50',
                 'delivery_period' => '14 hari',
                 'validity_period' => '30 hari',
@@ -376,6 +430,8 @@ class BppTest extends TestCase
         $this->assertDatabaseHas('bpp_supplier_quotes', [
             'bpp_id' => $bpp->id,
             'supplier_name' => 'Alpha Supplies Sdn. Bhd.',
+            'registration_number' => '003495679-P',
+            'supplier_address' => 'No. 13, Jalan Nova U5/52, Subang Bestari',
             'total_price' => '12500.50',
             'delivery_period' => '14 hari',
             'validity_period' => '30 hari',
@@ -398,6 +454,8 @@ class BppTest extends TestCase
         $quote = BppSupplierQuote::query()->create([
             'bpp_id' => $bpp->id,
             'supplier_name' => 'Beta Tech Enterprise',
+            'registration_number' => '00998877-X',
+            'supplier_address' => 'Lot 8, Jalan Teknologi 2, Cyberjaya',
             'total_price' => 8800,
             'delivery_period' => '21 hari',
             'validity_period' => '45 hari',
@@ -419,6 +477,8 @@ class BppTest extends TestCase
         $this->assertDatabaseHas('bpps', [
             'id' => $bpp->id,
             'd_nama_pembekal' => 'Beta Tech Enterprise',
+            'd_alamat_pembekal' => 'Lot 8, Jalan Teknologi 2, Cyberjaya',
+            'd_no_pendaftaran_syarikat' => '00998877-X',
             'd_kriteria_pemilihan' => 'Lain-lain',
             'd_lain_lain_kriteria' => 'Harga dan lead time paling sesuai.',
         ]);
@@ -532,7 +592,9 @@ class BppTest extends TestCase
         $response->assertOk();
         $response->assertSee('Top Section');
         $response->assertSee('Kaedah Perolehan');
-        $response->assertDontSee('Quotation Extraction Assistant');
+        $response->assertSee('C. Quotation Comparison');
+        $response->assertSee('Quotation Extraction Assistant');
+        $response->assertSee('Copy ChatGPT Prompt');
     }
 
     public function test_valid_quotation_extraction_can_be_parsed_and_stored_for_review(): void
@@ -551,9 +613,13 @@ SELECTED_SUPPLIER: Alpha Supplies Sdn. Bhd.
 SELECTION_REASON: Tawaran harga terbaik
 SELECTION_REASON_LAIN_LAIN:
 SUPPLIERS:
-supplier_name|total_price|delivery_period|validity_period|quotation_reference
-Alpha Supplies Sdn. Bhd.|12500.50|14 hari|30 hari|QT-001
-Beta Tech Enterprise|12990.00|21 hari|30 hari|QT-002
+supplier_name|registration_number|supplier_address|total_price|delivery_period|validity_period|quotation_reference
+Alpha Supplies Sdn. Bhd.|003495679-P|No. 13, Jalan Nova U5/52, Subang Bestari|12500.50|14 hari|30 hari|QT-001
+Beta Tech Enterprise|00998877-X|Lot 8, Jalan Teknologi 2, Cyberjaya|12990.00|21 hari|30 hari|QT-002
+SUPPLIER_COMPARISON_ITEMS:
+line_number|item_spesifikasi|kuantiti|unit_ukuran|supplier_name|harga_tawaran|jumlah_harga
+1|Komputer riba|10|unit|Alpha Supplies Sdn. Bhd.|1250.05|12500.50
+1|Komputer riba|10|unit|Beta Tech Enterprise|1299.00|12990.00
 SELECTED_SUPPLIER_ITEMS:
 item_spesifikasi|kuantiti|unit_ukuran|harga_seunit|jumlah_harga
 Komputer riba|10|unit|1250.05|12500.50
@@ -577,7 +643,10 @@ TEXT;
         $this->assertTrue($bpp->quotation_extraction_review['valid']);
         $this->assertSame('Bekalan', $bpp->quotation_extraction_review['data']['procurement_category']);
         $this->assertSame('Alpha Supplies Sdn. Bhd.', $bpp->quotation_extraction_review['data']['selected_supplier']);
+        $this->assertSame('003495679-P', $bpp->quotation_extraction_review['data']['suppliers'][0]['registration_number']);
+        $this->assertSame('No. 13, Jalan Nova U5/52, Subang Bestari', $bpp->quotation_extraction_review['data']['suppliers'][0]['supplier_address']);
         $this->assertCount(2, $bpp->quotation_extraction_review['data']['suppliers']);
+        $this->assertCount(2, $bpp->quotation_extraction_review['data']['comparison_rows']);
         $this->assertCount(1, $bpp->quotation_extraction_review['data']['appendix_rows']);
     }
 
@@ -597,8 +666,11 @@ SELECTED_SUPPLIER: Alpha Supplies Sdn. Bhd.
 SELECTION_REASON: Tawaran harga terbaik
 SELECTION_REASON_LAIN_LAIN:
 SUPPLIERS:
-supplier_name|total_price|delivery_period|validity_period|quotation_reference
-Alpha Supplies Sdn. Bhd.|12500.50|14 hari|30 hari|QT-001
+supplier_name|registration_number|supplier_address|total_price|delivery_period|validity_period|quotation_reference
+Alpha Supplies Sdn. Bhd.|003495679-P|No. 13, Jalan Nova U5/52, Subang Bestari|12500.50|14 hari|30 hari|QT-001
+SUPPLIER_COMPARISON_ITEMS:
+line_number|item_spesifikasi|kuantiti|unit_ukuran|supplier_name|harga_tawaran|jumlah_harga
+1|Komputer riba|10|unit|Alpha Supplies Sdn. Bhd.|1250.05|12500.50
 SELECTED_SUPPLIER_ITEMS:
 item_spesifikasi|kuantiti|unit_ukuran|harga_seunit|jumlah_harga
 Komputer riba|10|unit|1250.05|12500.50
@@ -676,6 +748,8 @@ TEXT;
                     'suppliers' => [
                         [
                             'supplier_name' => 'Alpha Supplies Sdn. Bhd.',
+                            'registration_number' => '003495679-P',
+                            'supplier_address' => 'No. 13, Jalan Nova U5/52, Subang Bestari',
                             'total_price' => '12500.50',
                             'delivery_period' => '14 hari',
                             'validity_period' => '30 hari',
@@ -684,11 +758,51 @@ TEXT;
                         ],
                         [
                             'supplier_name' => 'Beta Tech Enterprise',
+                            'registration_number' => '00998877-X',
+                            'supplier_address' => 'Lot 8, Jalan Teknologi 2, Cyberjaya',
                             'total_price' => '12990.00',
                             'delivery_period' => '21 hari',
                             'validity_period' => '30 hari',
                             'quotation_reference' => 'QT-002',
                             'is_selected' => false,
+                        ],
+                    ],
+                    'comparison_rows' => [
+                        [
+                            'line_number' => 1,
+                            'item_spesifikasi' => 'Komputer riba',
+                            'kuantiti' => '10.00',
+                            'unit_ukuran' => 'unit',
+                            'supplier_name' => 'Alpha Supplies Sdn. Bhd.',
+                            'harga_tawaran' => '1250.05',
+                            'jumlah_harga' => '12500.50',
+                        ],
+                        [
+                            'line_number' => 1,
+                            'item_spesifikasi' => 'Komputer riba',
+                            'kuantiti' => '10.00',
+                            'unit_ukuran' => 'unit',
+                            'supplier_name' => 'Beta Tech Enterprise',
+                            'harga_tawaran' => '1299.00',
+                            'jumlah_harga' => '12990.00',
+                        ],
+                    ],
+                    'comparison_matrix_rows' => [
+                        [
+                            'line_number' => 1,
+                            'item_spesifikasi' => 'Komputer riba',
+                            'kuantiti' => '10.00',
+                            'unit_ukuran' => 'unit',
+                            'supplier_prices' => [
+                                'Alpha Supplies Sdn. Bhd.' => [
+                                    'harga_tawaran' => '1250.05',
+                                    'jumlah_harga' => '12500.50',
+                                ],
+                                'Beta Tech Enterprise' => [
+                                    'harga_tawaran' => '1299.00',
+                                    'jumlah_harga' => '12990.00',
+                                ],
+                            ],
                         ],
                     ],
                     'appendix_rows' => [
@@ -722,6 +836,8 @@ TEXT;
         $this->assertSame('Bekalan', $bpp->b2_kategori_perolehan);
         $this->assertSame('Tawaran harga terbaik', $bpp->c1_selection_reason);
         $this->assertSame('Alpha Supplies Sdn. Bhd.', $bpp->d_nama_pembekal);
+        $this->assertSame('No. 13, Jalan Nova U5/52, Subang Bestari', $bpp->d_alamat_pembekal);
+        $this->assertSame('003495679-P', $bpp->d_no_pendaftaran_syarikat);
         $this->assertSame('Tawaran harga terbaik', $bpp->d_kriteria_pemilihan);
         $this->assertSame('12500.50', $bpp->b3_nilai_tawaran_perolehan);
         $this->assertNull($bpp->quotation_extraction_review);
@@ -734,7 +850,16 @@ TEXT;
         $this->assertDatabaseHas('bpp_supplier_quotes', [
             'bpp_id' => $bpp->id,
             'supplier_name' => 'Alpha Supplies Sdn. Bhd.',
+            'registration_number' => '003495679-P',
+            'supplier_address' => 'No. 13, Jalan Nova U5/52, Subang Bestari',
             'is_selected' => true,
+        ]);
+
+        $this->assertDatabaseHas('bpp_supplier_quote_items', [
+            'bpp_id' => $bpp->id,
+            'line_number' => 1,
+            'item_spesifikasi' => 'Komputer riba',
+            'jumlah_harga' => '12500.50',
         ]);
 
         $this->assertDatabaseHas('bpp_appendix_rows', [
@@ -747,6 +872,65 @@ TEXT;
         $this->assertDatabaseMissing('bpp_appendix_rows', [
             'bpp_id' => $bpp->id,
             'item_spesifikasi' => 'Legacy row',
+        ]);
+    }
+
+    public function test_valid_quotation_extraction_can_be_imported_directly_to_c1_and_d(): void
+    {
+        $user = User::factory()->create();
+
+        $bpp = Bpp::query()->create([
+            'title' => 'Direct import draft',
+            'status' => 'draft',
+            'b2_kategori_perolehan' => 'Bekalan',
+        ]);
+
+        $payload = <<<'TEXT'
+QUOTATION_EXTRACTION_V1
+PROCUREMENT_CATEGORY: Bekalan
+SELECTED_SUPPLIER: GADING DINAMIK RESOURCES
+SELECTION_REASON: Tawaran harga terbaik
+SELECTION_REASON_LAIN_LAIN:
+SUPPLIERS:
+supplier_name|registration_number|supplier_address|total_price|delivery_period|validity_period|quotation_reference
+GADING DINAMIK RESOURCES|003495679-P|No. 13, Jalan Nova U5/52, Subang Bestari, Shah Alam|9031.00|84 hari|30 hari|QUO-GDR26897
+SIRASAKI VENTURES|RA0095989-P|Lot. 3632, Jalan Besar, Kg. Bukit Lanchong, Shah Alam|10076.00|98 hari|90 hari|NIBM/Quo/151/26
+ULTRA SCIENTIFIC ENTERPRISE|002600589-A|No 2C-1B, Jalan Raya Dua, Seri Kembangan|11188.00|84 hari|90 hari|US-26/2662
+SUPPLIER_COMPARISON_ITEMS:
+line_number|item_spesifikasi|kuantiti|unit_ukuran|supplier_name|harga_tawaran|jumlah_harga
+1|Bekalan makmal (mask, slide, petri dish, bahan kimia, termometer)|1|lot|GADING DINAMIK RESOURCES|9031.00|9031.00
+1|Bekalan makmal (mask, slide, petri dish, bahan kimia, termometer)|1|lot|SIRASAKI VENTURES|10076.00|10076.00
+1|Bekalan makmal (mask, slide, petri dish, bahan kimia, termometer)|1|lot|ULTRA SCIENTIFIC ENTERPRISE|11188.00|11188.00
+SELECTED_SUPPLIER_ITEMS:
+item_spesifikasi|kuantiti|unit_ukuran|harga_seunit|jumlah_harga
+Bekalan makmal (mask, slide, petri dish, bahan kimia, termometer)|1|lot|9031.00|9031.00
+TOTALS:
+appendix_total|9031.00
+selected_supplier_total|9031.00
+TEXT;
+
+        $response = $this
+            ->actingAs($user)
+            ->post(route('bpp.quotation-extraction.import', $bpp), [
+                'quotation_extraction_text' => $payload,
+            ]);
+
+        $response->assertRedirect(route('bpp.show', $bpp));
+
+        $this->assertDatabaseHas('bpp_supplier_quotes', [
+            'bpp_id' => $bpp->id,
+            'supplier_name' => 'GADING DINAMIK RESOURCES',
+            'registration_number' => '003495679-P',
+            'supplier_address' => 'No. 13, Jalan Nova U5/52, Subang Bestari, Shah Alam',
+            'is_selected' => true,
+        ]);
+
+        $this->assertDatabaseHas('bpps', [
+            'id' => $bpp->id,
+            'd_nama_pembekal' => 'GADING DINAMIK RESOURCES',
+            'd_no_pendaftaran_syarikat' => '003495679-P',
+            'd_alamat_pembekal' => 'No. 13, Jalan Nova U5/52, Subang Bestari, Shah Alam',
+            'd_kriteria_pemilihan' => 'Tawaran harga terbaik',
         ]);
     }
 
@@ -897,7 +1081,39 @@ TEXT;
 
         $pageTwoResponse->assertOk();
         $pageTwoResponse->assertSee('BPP Page 2');
-        $pageTwoResponse->assertSee('Keputusan / Kelulusan');
+        $pageTwoResponse->assertSee('SEMAKAN JABATAN PENGURUSAN PROJEK');
+        $pageTwoResponse->assertSee('PERAKUAN PRE-SANCTION CFO');
+    }
+
+    public function test_combined_bpp_preview_route_renders_all_four_core_pages(): void
+    {
+        $user = User::factory()->create();
+
+        $bpp = Bpp::query()->create([
+            'title' => 'Combined preview draft',
+            'status' => 'draft',
+            'no_rujukan_perolehan' => 'BPP-2026-021',
+            'kaedah_perolehan' => 'tender',
+            'b1_tajuk_perolehan' => 'Perolehan sistem makmal',
+            'b2_kategori_perolehan' => 'Bekalan',
+            'b6_justifikasi_keperluan' => 'Keperluan penyelidikan semasa.',
+            'd_nama_pembekal' => 'Gading Dinamik Resources',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('bpp.printables.preview', $bpp));
+
+        $response->assertOk();
+        $response->assertSee('BPP Preview');
+        $response->assertSee('BAHAGIAN B');
+        $response->assertSee('BORANG');
+        $response->assertSee('No. Rujukan Perolehan');
+        $response->assertSee('Perolehan sistem makmal');
+        $response->assertSee('Gading Dinamik Resources');
+        $response->assertDontSee('fixed-page-1.png');
+        $response->assertDontSee('fixed-page-2.png');
+        $response->assertDontSee('fixed-page-4.png');
     }
 
     public function test_printable_preview_routes_render_dynamic_appendix_pages_from_real_draft_data(): void
@@ -1036,6 +1252,21 @@ TEXT;
         $response->assertHeader('content-type', 'application/pdf');
         $response->assertHeader('content-disposition');
         $this->assertStringStartsWith('%PDF', $response->getContent());
+
+        $pdfRouteResponse = $this
+            ->actingAs($user)
+            ->get(route('bpp.pdf', $bpp));
+
+        $pdfRouteResponse->assertOk();
+        $pdfRouteResponse->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $pdfRouteResponse->getContent());
+
+        require_once base_path('vendor/setasign/fpdf/fpdf.php');
+        $temporaryPdfPath = storage_path('app/testing-bpp-export.pdf');
+        file_put_contents($temporaryPdfPath, $pdfRouteResponse->getContent());
+        $pdfInspector = new Fpdi();
+        $this->assertSame(6, $pdfInspector->setSourceFile($temporaryPdfPath));
+        @unlink($temporaryPdfPath);
 
         $this->assertDatabaseHas('bpps', [
             'id' => $bpp->id,

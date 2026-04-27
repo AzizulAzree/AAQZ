@@ -44,11 +44,12 @@ class BppController extends Controller
                 ->where('appendix_type', $bpp->activeAppendixType())
                 ->values(),
             'supplierQuotes' => $bpp->supplierQuotes()->get(),
+            'supplierQuoteItems' => $bpp->supplierQuoteItems()->with('supplierQuote')->get(),
             'selectionReasonOptions' => $bpp->selectionReasonOptions(),
             'quotationExtractionPrompt' => $parser->prompt(),
             'quotationExtractionFormatVersion' => $parser->formatVersion(),
             'quotationExtractionReview' => $bpp->quotation_extraction_review,
-            'hasExistingImportedDraftData' => $bpp->supplierQuotes()->exists() || $bpp->appendixRows()->exists(),
+            'hasExistingImportedDraftData' => $bpp->supplierQuotes()->exists() || $bpp->supplierQuoteItems()->exists() || $bpp->appendixRows()->exists(),
             'validationResult' => $validationService->validate($bpp),
         ]);
     }

@@ -1,4 +1,4 @@
-<section class="print-page">
+<section class="{{ !empty($packagePdfMode) ? 'c1-page pdf-package-page' : 'print-page c1-page' }}">
     <div class="print-page-header">
         <div>
             <p class="print-form-code">{{ $bpp->ruj_dokumen ?: 'NIBM/F/PRC/02/01' }}</p>

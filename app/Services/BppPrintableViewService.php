@@ -6,6 +6,22 @@ use App\Models\Bpp;
 
 class BppPrintableViewService
 {
+    public function packagePreview(Bpp $bpp, array $validationResult): array
+    {
+        $c1 = $this->c1($bpp);
+        $c2 = $this->appendix($bpp, 'c2', 'C2 - Perbekalan');
+
+        return [
+            'bpp' => $bpp,
+            'previewTitle' => 'Preview BPP',
+            'checklistItems' => $this->checklistItems($bpp),
+            'validationResult' => $validationResult,
+            'supplierQuotes' => $c1['supplierQuotes'],
+            'selectedSupplier' => $c1['selectedSupplier'],
+            'c2Data' => $c2,
+        ];
+    }
+
     public function checklist(Bpp $bpp, array $validationResult): array
     {
         return [

@@ -1,4 +1,4 @@
-<section class="print-page">
+<section class="{{ !empty($packagePdfMode) ? 'c2-page pdf-package-page' : 'print-page c2-page' }}">
     <div class="print-page-header">
         <div>
             <p class="print-form-code">{{ $bpp->ruj_dokumen ?: 'NIBM/F/PRC/02/01' }}</p>
@@ -19,7 +19,7 @@
         </div>
     </div>
 
-    @if (! $isActiveAppendix)
+    @if (! $isActiveAppendix && empty($forcePackageMode))
         <div class="mt-6 print-status-banner">
             <em>{{ __('Nota:') }}</em>
             {{ __('Lampiran ini bukan lampiran aktif untuk kategori perolehan semasa, namun pratonton ini masih memaparkan data C2 yang disimpan pada draft.') }}

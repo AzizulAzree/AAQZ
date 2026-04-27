@@ -9,7 +9,7 @@
             <div class="print-meta-row"><span>{{ __('Ruj. Dokumen') }}</span><strong>{{ $bpp->ruj_dokumen ?: 'NIBM/F/PRC/02/01' }}</strong></div>
             <div class="print-meta-row"><span>{{ __('No. Semakan') }}</span><strong>{{ $bpp->no_semakan ?: '01' }}</strong></div>
             <div class="print-meta-row"><span>{{ __('Tarikh Kuat Kuasa') }}</span><strong>{{ $bpp->tarikh_kuat_kuasa ?: '-' }}</strong></div>
-            <div class="print-meta-row"><span>{{ __('Muka Surat') }}</span><strong>{{ $bpp->muka_surat ?: '1 / 2' }}</strong></div>
+            <div class="print-meta-row"><span>{{ __('Muka Surat') }}</span><strong>{{ $previewPageMeta ?? ($bpp->muka_surat ?: '1 / 2') }}</strong></div>
         </div>
     </div>
 

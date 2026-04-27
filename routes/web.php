@@ -27,7 +27,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/bpp', [BppController::class, 'store'])->name('bpp.store');
     Route::get('/bpp/{bpp}', [BppController::class, 'show'])->name('bpp.show');
     Route::put('/bpp/{bpp}', [BppController::class, 'update'])->name('bpp.update');
+    Route::get('/bpp/{bpp}/pdf', [BppPdfExportController::class, 'export'])->name('bpp.pdf');
     Route::get('/bpp/{bpp}/export/pdf', [BppPdfExportController::class, 'export'])->name('bpp.export.pdf');
+    Route::get('/bpp/{bpp}/printables/preview', [BppPrintablePreviewController::class, 'packagePreview'])->name('bpp.printables.preview');
     Route::get('/bpp/{bpp}/printables/checklist', [BppPrintablePreviewController::class, 'checklist'])->name('bpp.printables.checklist');
     Route::get('/bpp/{bpp}/printables/page-one', [BppPrintablePreviewController::class, 'pageOne'])->name('bpp.printables.page-one');
     Route::get('/bpp/{bpp}/printables/page-two', [BppPrintablePreviewController::class, 'pageTwo'])->name('bpp.printables.page-two');
@@ -36,6 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/bpp/{bpp}/printables/c3', [BppPrintablePreviewController::class, 'c3'])->name('bpp.printables.c3');
     Route::get('/bpp/{bpp}/printables/c4', [BppPrintablePreviewController::class, 'c4'])->name('bpp.printables.c4');
     Route::post('/bpp/{bpp}/quotation-extraction/parse', [BppQuotationExtractionController::class, 'parse'])->name('bpp.quotation-extraction.parse');
+    Route::post('/bpp/{bpp}/quotation-extraction/import', [BppQuotationExtractionController::class, 'import'])->name('bpp.quotation-extraction.import');
     Route::post('/bpp/{bpp}/quotation-extraction/apply', [BppQuotationExtractionController::class, 'apply'])->name('bpp.quotation-extraction.apply');
     Route::post('/bpp/{bpp}/appendix-rows', [BppAppendixRowController::class, 'store'])->name('bpp.appendix-rows.store');
     Route::put('/bpp/{bpp}/appendix-rows/{appendixRow}', [BppAppendixRowController::class, 'update'])->name('bpp.appendix-rows.update');

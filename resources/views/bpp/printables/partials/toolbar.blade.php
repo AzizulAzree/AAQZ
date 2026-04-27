@@ -13,6 +13,9 @@
                 <a href="{{ route('bpp.show', $bpp) }}" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50">
                     {{ __('Back To Draft') }}
                 </a>
+                <a href="{{ route('bpp.printables.preview', $bpp) }}" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50">
+                    {{ __('Preview BPP') }}
+                </a>
                 <a href="{{ route('bpp.printables.checklist', $bpp) }}" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50">
                     {{ __('Senarai Semak') }}
                 </a>

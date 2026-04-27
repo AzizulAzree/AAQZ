@@ -15,6 +15,12 @@ class BppSupplierQuoteController extends Controller
         BppSupplierQuote::query()->create([
             'bpp_id' => $bpp->id,
             'supplier_name' => $request->string('supplier_name')->toString(),
+            'registration_number' => $request->filled('registration_number')
+                ? $request->string('registration_number')->toString()
+                : null,
+            'supplier_address' => $request->filled('supplier_address')
+                ? $request->string('supplier_address')->toString()
+                : null,
             'total_price' => $request->input('total_price'),
             'delivery_period' => $request->string('delivery_period')->toString(),
             'validity_period' => $request->string('validity_period')->toString(),
@@ -35,6 +41,12 @@ class BppSupplierQuoteController extends Controller
 
         $supplierQuote->update([
             'supplier_name' => $request->string('supplier_name')->toString(),
+            'registration_number' => $request->filled('registration_number')
+                ? $request->string('registration_number')->toString()
+                : null,
+            'supplier_address' => $request->filled('supplier_address')
+                ? $request->string('supplier_address')->toString()
+                : null,
             'total_price' => $request->input('total_price'),
             'delivery_period' => $request->string('delivery_period')->toString(),
             'validity_period' => $request->string('validity_period')->toString(),

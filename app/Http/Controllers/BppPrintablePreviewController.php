@@ -9,6 +9,18 @@ use Illuminate\View\View;
 
 class BppPrintablePreviewController extends Controller
 {
+    public function packagePreview(
+        Bpp $bpp,
+        BppValidationService $validationService,
+        BppPrintableViewService $printableViewService
+    ): View
+    {
+        return view('bpp.printables.package-preview', $printableViewService->packagePreview(
+            $bpp,
+            $validationService->validate($bpp)
+        ));
+    }
+
     public function checklist(
         Bpp $bpp,
         BppValidationService $validationService,
