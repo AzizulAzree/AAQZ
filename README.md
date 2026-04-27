@@ -1,15 +1,16 @@
 # AAQZ
 
-AAQZ is a private Laravel 13 workspace app for keeping everyday planning in one place. It combines a calendar view for reminders and follow-ups, a project area for organizing workspaces and shortcuts, and a personal sticky note that follows the signed-in user across pages and devices.
+AAQZ is a private Laravel 13 workspace app for keeping everyday planning and procurement work in one place. It combines a calendar view for reminders and follow-ups, a project area for organizing workspaces and shortcuts, a BPP procurement workspace with printable/exportable form flows, and a personal sticky note that follows the signed-in user across pages and devices.
 
 The app is designed around a simple idea: reduce context switching. Instead of spreading quick reminders, recurring follow-ups, bookmarked links, and admin tasks across several tools, AAQZ keeps them inside one authenticated interface.
 
 ## App Overview
 
-AAQZ is currently built around three core areas:
+AAQZ is currently built around four core areas:
 
 - `Calendar`: a monthly planning view with reminder summaries, quick entry creation, and follow-up support.
 - `Project`: a lightweight workspace organizer for folders, shortcuts, and recently opened links.
+- `BPP`: a procurement request workspace for managing BPP data, supplier comparison drafts, appendix rows, quotation extraction review, and printable/PDF outputs.
 - `Sticky note`: a draggable personal note that auto-saves and stays with the user across authenticated pages.
 
 The app uses server-rendered Laravel Blade views with Alpine.js for focused interactive behavior where needed.
@@ -41,6 +42,21 @@ The app uses server-rendered Laravel Blade views with Alpine.js for focused inte
 - Track recently opened shortcuts for quick return access.
 - Keep project links grouped in a cleaner, less cluttered structure than a traditional bookmarks list.
 
+### BPP Procurement Workspace
+
+- Create and update BPP records from the authenticated app.
+- Manage core BPP page data such as applicant info, procurement details, B(i), B(ii), supplier recommendation fields, and selection reasons.
+- Manage appendix row drafts for C2, C3, and C4 style procurement tables.
+- Manage supplier quote rows and selected supplier state.
+- Auto-sync selected supplier details into the BPP `D` section fields.
+- Review printable page previews for page one, page two, and package output routes.
+- Export the current printable package to PDF using a browser-based renderer instead of Dompdf.
+- Parse a structured quotation extraction result and store it for review before applying it to the BPP draft.
+- Apply a valid quotation extraction result into:
+  - `bpp_supplier_quotes`
+  - `bpp_supplier_quote_items`
+  - `bpp_appendix_rows`
+
 ### Sticky Note Prototype
 
 - Floating sticky note available across authenticated pages.
@@ -54,6 +70,31 @@ The app uses server-rendered Laravel Blade views with Alpine.js for focused inte
 - User management screen for adding additional sign-in accounts.
 - Per-user color assignment and uniqueness enforcement.
 - Read-only style data browser for inspecting stored application data from the admin area.
+
+### BPP Printable And Export Routes
+
+Authenticated BPP printable routes currently include:
+
+- `/bpp/{bpp}/printables/preview`
+- `/bpp/{bpp}/printables/checklist`
+- `/bpp/{bpp}/printables/page-one`
+- `/bpp/{bpp}/printables/page-two`
+- `/bpp/{bpp}/printables/c1`
+- `/bpp/{bpp}/printables/c2`
+- `/bpp/{bpp}/printables/c3`
+- `/bpp/{bpp}/printables/c4`
+
+The PDF export routes are:
+
+- `/bpp/{bpp}/pdf`
+- `/bpp/{bpp}/export/pdf`
+
+The current merged export flow is browser-rendered and produces:
+
+- page 1 from `page-one-document`
+- page 2 from `page-two-document`
+- page 3 from `page-three-document`
+- the remaining pages as blank placeholders while the rest of the package is still being rebuilt
 
 ## Why This App Exists
 
@@ -88,6 +129,7 @@ The current version already covers the core workflow, but there are a few natura
 - Drag-and-drop organization in the project section.
 - Better mobile-specific sticky note behavior.
 - Richer note formatting for the sticky note or future note system.
+- Complete the remaining BPP printable pages so the full package matches the official document set without placeholder blank pages.
 
 ## Developer Documentation
 
@@ -144,6 +186,26 @@ The saved fields are:
 - `is_collapsed`
 
 This is intentionally a simple prototype-friendly structure that can be expanded later into a richer notes feature.
+
+### BPP Notes
+
+The BPP module currently stores its draft state across:
+
+- `bpps`
+- `bpp_supplier_quotes`
+- `bpp_supplier_quote_items`
+- `bpp_appendix_rows`
+
+The quotation extraction assistant expects a strict plain-text payload in the `QUOTATION_EXTRACTION_V1` format. A valid extraction can be parsed for review and then applied into the supplier quote and appendix draft tables.
+
+The extraction import flow depends on these sections being present exactly:
+
+- `SUPPLIERS`
+- `SUPPLIER_COMPARISON_ITEMS`
+- `SELECTED_SUPPLIER_ITEMS`
+- `TOTALS`
+
+If the structured extraction is invalid, the BPP draft review is saved, but the supplier quote and appendix tables are not replaced until a valid result is applied.
 
 ### Test User Login
 
@@ -264,4 +326,12 @@ npm install
 npm run build
 php artisan migrate
 php artisan test
+```
+
+Useful BPP-related development commands:
+
+```bash
+php artisan view:clear
+php artisan route:list --path=bpp
+php artisan test tests/Feature/BppTest.php --filter=quotation_extraction
 ```
