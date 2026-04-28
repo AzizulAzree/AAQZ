@@ -10,6 +10,11 @@
             margin: 0;
         }
 
+        @page page-five-landscape {
+            size: A4 landscape;
+            margin: 0;
+        }
+
         html, body {
             margin: 0;
             padding: 0;
@@ -21,7 +26,18 @@
             break-after: page;
         }
 
+        .pdf-package-page-landscape {
+            page: page-five-landscape;
+            page-break-after: always;
+            break-after: page;
+        }
+
         .pdf-package-page:last-child {
+            page-break-after: auto;
+            break-after: auto;
+        }
+
+        .pdf-package-page-landscape:last-child {
             page-break-after: auto;
             break-after: auto;
         }
@@ -50,8 +66,14 @@
     <div class="pdf-package-page">
         @include('bpp.printables.partials.page-three-document', ['pageThreeLogo' => $pageOneLogo])
     </div>
-    <div class="pdf-package-page"><div class="pdf-blank-page"></div></div>
-    <div class="pdf-package-page"><div class="pdf-blank-page"></div></div>
-    <div class="pdf-package-page"><div class="pdf-blank-page"></div></div>
+    <div class="pdf-package-page">
+        @include('bpp.printables.partials.page-four-document', ['pageFourLogo' => $pageOneLogo])
+    </div>
+    <div class="pdf-package-page-landscape">
+        @include('bpp.printables.partials.page-five-document')
+    </div>
+    <div class="pdf-package-page">
+        @include('bpp.printables.partials.page-six-document')
+    </div>
 </body>
 </html>

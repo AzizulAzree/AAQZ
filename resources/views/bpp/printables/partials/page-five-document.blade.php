@@ -32,10 +32,8 @@
 
 <style>
 *{box-sizing:border-box}
-.pdf-page{width:210mm;height:297mm;margin:0 auto;background:#fff;overflow:hidden;position:relative}
-.c1-portrait-frame{position:absolute;left:12mm;top:12mm;width:186mm;height:273mm;overflow:hidden;background:#fff}
-.c1-rotated-page{position:absolute;left:0;top:273mm;width:273mm;height:186mm;transform-origin:top left;transform:rotate(-90deg);padding:6.5mm 11mm 3.5mm;background:#fff;overflow:hidden}
-.c1-shell{width:100%;height:100%;font-family:Arial,Helvetica,sans-serif;color:#000;font-size:2.65mm;line-height:1.03;overflow:hidden}
+.pdf-page{width:297mm;height:210mm;margin:0 auto;background:#fff;overflow:hidden;padding:6mm 7mm 5mm}
+.c1-shell{width:100%;height:100%;font-family:Arial,Helvetica,sans-serif;color:#000;font-size:2.7mm;line-height:1.03;overflow:hidden}
 .c1-topline{display:flex;justify-content:flex-end;gap:6mm;font-size:2.8mm;margin-bottom:.7mm}
 .c1-topline span{display:inline-block}
 .c1-table{width:100%;border-collapse:collapse;table-layout:fixed}
@@ -72,8 +70,6 @@
 </style>
 
 <div class="pdf-page">
-    <div class="c1-portrait-frame">
-    <div class="c1-rotated-page">
     <div class="c1-shell">
         <div class="c1-topline">
             <span>{{ $bpp->ruj_dokumen ?? 'NIBM/F/PRC/02/01' }}</span>
@@ -260,7 +256,5 @@
                 </div>
             </div>
         </div>
-    </div>
-    </div>
     </div>
 </div>
