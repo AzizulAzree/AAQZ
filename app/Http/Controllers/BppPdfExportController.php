@@ -217,45 +217,16 @@ HTML;
         $pdf->Output('F', $outputPath);
     }
 
-    private function browserBinary(): string
-    {
-        $configuredPath = trim((string) env('BPP_PDF_BROWSER_PATH', ''));
+     private function browserBinary(): string
+{
+    $forced = env('BPP_PDF_BROWSER_PATH');
 
-        if ($configuredPath !== '') {
-            if (File::exists($configuredPath)) {
-                return $configuredPath;
-            }
-
-            throw new RuntimeException(
-                'Configured browser binary was not found at BPP_PDF_BROWSER_PATH: '.$configuredPath
-            );
-        }
-
-        $localAppData = (string) env('LOCALAPPDATA', '');
-        $programFiles = (string) env('ProgramFiles', 'C:\\Program Files');
-        $programFilesX86 = (string) env('ProgramFiles(x86)', 'C:\\Program Files (x86)');
-
-        $candidates = array_filter([
-            $programFilesX86.'\\Microsoft\\Edge\\Application\\msedge.exe',
-            $programFiles.'\\Microsoft\\Edge\\Application\\msedge.exe',
-            $localAppData !== '' ? $localAppData.'\\Microsoft\\Edge\\Application\\msedge.exe' : null,
-            $programFiles.'\\Google\\Chrome\\Application\\chrome.exe',
-            $programFilesX86.'\\Google\\Chrome\\Application\\chrome.exe',
-            $localAppData !== '' ? $localAppData.'\\Google\\Chrome\\Application\\chrome.exe' : null,
-        ]);
-
-        foreach ($candidates as $candidate) {
-            if (File::exists($candidate)) {
-                return $candidate;
-            }
-        }
-
-        throw new RuntimeException(
-            'Browser path not configured and no supported browser binary was auto-detected. '
-            .'Install Microsoft Edge or Google Chrome, or set BPP_PDF_BROWSER_PATH in your .env file.'
-        );
+    if ($forced && file_exists($forced)) {
+        return $forced;
     }
 
+    throw new RuntimeException('Browser path not configured. Set BPP_PDF_BROWSER_PATH.');
+}
     private function downloadName(Bpp $bpp): string
     {
         $reference = trim((string) ($bpp->no_rujukan_perolehan ?: $bpp->id));
@@ -264,4 +235,5 @@ HTML;
 
         return 'BPP-'.$reference.'.pdf';
     }
+
 }
