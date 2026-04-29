@@ -72,7 +72,7 @@
     <div class="pdf-package-page-landscape">
         @include('bpp.printables.partials.page-five-document')
     </div>
-    <div class="pdf-package-page">
+    <div class="pdf-package-page-landscape">
         @include('bpp.printables.partials.page-six-document')
     </div>
 </body>
