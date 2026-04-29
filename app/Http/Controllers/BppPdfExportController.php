@@ -219,12 +219,30 @@ HTML;
 
     private function browserBinary(): string
     {
-        $candidates = [
-            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-        ];
+        $configuredPath = trim((string) env('BPP_PDF_BROWSER_PATH', ''));
+
+        if ($configuredPath !== '') {
+            if (File::exists($configuredPath)) {
+                return $configuredPath;
+            }
+
+            throw new RuntimeException(
+                'Configured browser binary was not found at BPP_PDF_BROWSER_PATH: '.$configuredPath
+            );
+        }
+
+        $localAppData = (string) env('LOCALAPPDATA', '');
+        $programFiles = (string) env('ProgramFiles', 'C:\\Program Files');
+        $programFilesX86 = (string) env('ProgramFiles(x86)', 'C:\\Program Files (x86)');
+
+        $candidates = array_filter([
+            $programFilesX86.'\\Microsoft\\Edge\\Application\\msedge.exe',
+            $programFiles.'\\Microsoft\\Edge\\Application\\msedge.exe',
+            $localAppData !== '' ? $localAppData.'\\Microsoft\\Edge\\Application\\msedge.exe' : null,
+            $programFiles.'\\Google\\Chrome\\Application\\chrome.exe',
+            $programFilesX86.'\\Google\\Chrome\\Application\\chrome.exe',
+            $localAppData !== '' ? $localAppData.'\\Google\\Chrome\\Application\\chrome.exe' : null,
+        ]);
 
         foreach ($candidates as $candidate) {
             if (File::exists($candidate)) {
@@ -232,7 +250,10 @@ HTML;
             }
         }
 
-        throw new RuntimeException('No supported browser binary was found for headless PDF export.');
+        throw new RuntimeException(
+            'Browser path not configured and no supported browser binary was auto-detected. '
+            .'Install Microsoft Edge or Google Chrome, or set BPP_PDF_BROWSER_PATH in your .env file.'
+        );
     }
 
     private function downloadName(Bpp $bpp): string
