@@ -3,6 +3,31 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 
 window.Alpine = Alpine;
+window.copyTextToClipboard = async (text) => {
+    const value = `${text ?? ''}`;
+
+    if (window.navigator?.clipboard?.writeText) {
+        await window.navigator.clipboard.writeText(value);
+        return true;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    textarea.style.pointerEvents = 'none';
+
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    try {
+        return document.execCommand('copy');
+    } finally {
+        document.body.removeChild(textarea);
+    }
+};
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('stickyNote', (config) => ({

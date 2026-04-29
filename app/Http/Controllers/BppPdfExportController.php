@@ -54,7 +54,7 @@ class BppPdfExportController extends Controller
             ],
             [
                 'view' => 'bpp.printables.partials.page-six-document',
-                'orientation' => 'portrait',
+                'orientation' => 'landscape',
                 'data' => [],
             ],
         ];

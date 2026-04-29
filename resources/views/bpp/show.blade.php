@@ -379,7 +379,36 @@
                         </div>
                     </form>
 
-                    <details open class="bpp-group" x-data="{ copiedPrompt: false }">
+                    <details open class="bpp-group" x-data="{
+                        copiedPrompt: false,
+                        async copyPrompt() {
+                            const value = this.$refs.extractionPrompt?.value ?? '';
+
+                            if (window.navigator?.clipboard?.writeText) {
+                                await window.navigator.clipboard.writeText(value);
+                            } else {
+                                const textarea = document.createElement('textarea');
+                                textarea.value = value;
+                                textarea.setAttribute('readonly', '');
+                                textarea.style.position = 'fixed';
+                                textarea.style.opacity = '0';
+                                document.body.appendChild(textarea);
+                                textarea.focus();
+                                textarea.select();
+
+                                try {
+                                    if (! document.execCommand('copy')) {
+                                        throw new Error('Copy command was rejected.');
+                                    }
+                                } finally {
+                                    document.body.removeChild(textarea);
+                                }
+                            }
+
+                            this.copiedPrompt = true;
+                            setTimeout(() => this.copiedPrompt = false, 1800);
+                        }
+                    }">
                             <summary class="bpp-group-summary">
                                 <div class="bpp-group-summary-copy">
                                     <h2 class="bpp-group-title">{{ __('C. Quotation Comparison') }}</h2>
@@ -406,7 +435,7 @@
                                         <button
                                             type="button"
                                             class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50"
-                                            x-on:click="navigator.clipboard.writeText($refs.extractionPrompt.value).then(() => { copiedPrompt = true; setTimeout(() => copiedPrompt = false, 1800); });"
+                                            x-on:click="copyPrompt().catch(() => {})"
                                         >
                                             {{ __('Copy ChatGPT Prompt') }}
                                         </button>

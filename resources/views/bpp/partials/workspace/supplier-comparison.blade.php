@@ -1,4 +1,33 @@
-<section id="bpp-supplier-comparison" class="workspace-section-card bg-white shadow-sm sm:rounded-2xl" x-data="{ copiedPrompt: false }">
+<section id="bpp-supplier-comparison" class="workspace-section-card bg-white shadow-sm sm:rounded-2xl" x-data="{
+    copiedPrompt: false,
+    async copyPrompt() {
+        const value = this.$refs.extractionPrompt?.value ?? '';
+
+        if (window.navigator?.clipboard?.writeText) {
+            await window.navigator.clipboard.writeText(value);
+        } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = value;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+
+            try {
+                if (! document.execCommand('copy')) {
+                    throw new Error('Copy command was rejected.');
+                }
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        }
+
+        this.copiedPrompt = true;
+        setTimeout(() => this.copiedPrompt = false, 1800);
+    }
+}">
     <button type="button" class="workspace-section-toggle" x-on:click="toggleSection('supplier')" :aria-expanded="isOpen('supplier')">
         <div class="workspace-section-heading">
             <p class="project-tree-label">{{ __('Supplier Comparison') }}</p>
@@ -53,7 +82,7 @@
                         <p>{{ __('4. Review the parsed result before you apply it.') }}</p>
                     </div>
                     <div class="mt-5 flex flex-wrap items-center gap-3">
-                        <button type="button" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-100" x-on:click="navigator.clipboard.writeText($refs.extractionPrompt.value).then(() => { copiedPrompt = true; setTimeout(() => copiedPrompt = false, 1800); });">{{ __('Copy Prepared Prompt') }}</button>
+                        <button type="button" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-100" x-on:click="copyPrompt().catch(() => {})">{{ __('Copy Prepared Prompt') }}</button>
                         <span class="text-xs text-slate-500" x-show="copiedPrompt" x-transition.opacity>{{ __('Prompt copied.') }}</span>
                     </div>
                     <textarea x-ref="extractionPrompt" class="sr-only">{{ $quotationExtractionPrompt }}</textarea>

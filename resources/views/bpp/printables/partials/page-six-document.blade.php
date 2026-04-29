@@ -15,7 +15,7 @@
 
 <style>
 *{box-sizing:border-box}
-.pdf-page{width:210mm;height:297mm;margin:0 auto;background:#fff;overflow:hidden;padding:9mm 10mm 8mm}
+.pdf-page{width:297mm;height:210mm;margin:0 auto;background:#fff;overflow:hidden;padding:7mm 8mm 6mm}
 .c2-shell{width:100%;height:100%;font-family:Arial,Helvetica,sans-serif;color:#000}
 .c2-topline{display:flex;justify-content:flex-end;gap:8mm;font-size:3.1mm;line-height:1;margin-bottom:3.5mm}
 .c2-table{width:100%;border-collapse:collapse;table-layout:fixed}
