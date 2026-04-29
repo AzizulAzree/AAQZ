@@ -168,8 +168,14 @@ HTML;
         $htmlPath = $exportDir.DIRECTORY_SEPARATOR.$token.'.html';
         $pdfPath = $exportDir.DIRECTORY_SEPARATOR.$token.'.pdf';
         $profilePath = $exportDir.DIRECTORY_SEPARATOR.'edge-profile-'.$token;
+        $homePath = $profilePath.DIRECTORY_SEPARATOR.'home';
+        $xdgConfigPath = $profilePath.DIRECTORY_SEPARATOR.'xdg-config';
+        $xdgCachePath = $profilePath.DIRECTORY_SEPARATOR.'xdg-cache';
 
         File::put($htmlPath, $html);
+        File::ensureDirectoryExists($homePath);
+        File::ensureDirectoryExists($xdgConfigPath);
+        File::ensureDirectoryExists($xdgCachePath);
 
         try {
             $process = new Process([
@@ -180,10 +186,16 @@ HTML;
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
                 '--disable-software-rasterizer',
+                '--no-first-run',
+                '--disable-crash-reporter',
                 '--user-data-dir='.$profilePath,
                 '--no-pdf-header-footer',
                 '--print-to-pdf='.$pdfPath,
                 'file:///'.str_replace(DIRECTORY_SEPARATOR, '/', $htmlPath),
+            ], null, [
+                'HOME' => $homePath,
+                'XDG_CONFIG_HOME' => $xdgConfigPath,
+                'XDG_CACHE_HOME' => $xdgCachePath,
             ]);
             $process->setTimeout(120);
             $process->run();
