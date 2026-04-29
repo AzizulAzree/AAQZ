@@ -175,7 +175,11 @@ HTML;
             $process = new Process([
                 $this->browserBinary(),
                 '--headless',
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
                 '--disable-gpu',
+                '--disable-software-rasterizer',
                 '--user-data-dir='.$profilePath,
                 '--no-pdf-header-footer',
                 '--print-to-pdf='.$pdfPath,
@@ -217,16 +221,29 @@ HTML;
         $pdf->Output('F', $outputPath);
     }
 
-     private function browserBinary(): string
-{
-    $forced = env('BPP_PDF_BROWSER_PATH');
+    private function browserBinary(): string
+    {
+        $forced = trim((string) env('BPP_PDF_BROWSER_PATH', ''));
 
-    if ($forced && file_exists($forced)) {
-        return $forced;
+        if ($forced !== '' && File::exists($forced)) {
+            return $forced;
+        }
+
+        $candidates = array_filter([
+            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+        ]);
+
+        foreach ($candidates as $candidate) {
+            if (File::exists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        throw new RuntimeException('Browser path not configured. Set BPP_PDF_BROWSER_PATH.');
     }
-
-    throw new RuntimeException('Browser path not configured. Set BPP_PDF_BROWSER_PATH.');
-}
     private function downloadName(Bpp $bpp): string
     {
         $reference = trim((string) ($bpp->no_rujukan_perolehan ?: $bpp->id));
