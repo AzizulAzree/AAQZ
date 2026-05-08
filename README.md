@@ -11,7 +11,7 @@ AAQZ is currently built around four core areas:
 - `Calendar`: a monthly planning view with reminder summaries, quick entry creation, and follow-up support.
 - `Project`: a lightweight workspace organizer for folders, shortcuts, and recently opened links.
 - `BPP`: a procurement request workspace for managing BPP data, supplier comparison drafts, appendix rows, quotation extraction review, and printable/PDF outputs.
-- `Sticky note`: a draggable personal note that auto-saves and stays with the user across authenticated pages.
+- `Sticky note`: a draggable personal note that auto-saves, supports quick strike-through formatting, and stays with the user across authenticated pages.
 
 The app uses server-rendered Laravel Blade views with Alpine.js for focused interactive behavior where needed.
 
@@ -45,12 +45,12 @@ The app uses server-rendered Laravel Blade views with Alpine.js for focused inte
 ### BPP Procurement Workspace
 
 - Create and update BPP records from the authenticated app.
-- Manage core BPP page data such as applicant info, procurement details, B(i), B(ii), supplier recommendation fields, and selection reasons.
+- Manage the BPP drafting workspace for procurement method, applicant details, B(i), B(ii), supplier recommendation fields, and selection reasons.
 - Manage appendix row drafts for C2, C3, and C4 style procurement tables.
 - Manage supplier quote rows and selected supplier state.
 - Auto-sync selected supplier details into the BPP `D` section fields.
-- Review printable page previews for page one, page two, and package output routes.
-- Export the current printable package to PDF using a browser-based renderer instead of Dompdf.
+- Review printable page previews for the checklist, page one, page two, C1, C2, C3, C4, and the combined BPP preview route.
+- Export the current printable six-page package to PDF using a browser-based renderer and FPDI page merging.
 - Parse a structured quotation extraction result and store it for review before applying it to the BPP draft.
 - Apply a valid quotation extraction result into:
   - `bpp_supplier_quotes`
@@ -61,8 +61,10 @@ The app uses server-rendered Laravel Blade views with Alpine.js for focused inte
 
 - Floating sticky note available across authenticated pages.
 - Draggable note position that persists for the user.
-- Auto-saving note content.
+- Auto-saving note content in the database.
 - Collapse and expand interaction.
+- Minimal `Strike` action for crossing out highlighted text inside the note.
+- Uses the app's normal font styling at a smaller note size.
 - State stored in the database so the note follows the user across devices.
 
 ### Settings And Admin Tools
@@ -89,12 +91,23 @@ The PDF export routes are:
 - `/bpp/{bpp}/pdf`
 - `/bpp/{bpp}/export/pdf`
 
-The current merged export flow is browser-rendered and produces:
+The combined preview route is the quick in-app BPP review surface and currently shows the four core BPP pages together:
+
+- fixed page 1 template
+- fixed page 2 template
+- live page 3 BPP request body
+- fixed page 4 template
+
+The current merged export flow is browser-rendered and produces a six-page PDF package:
 
 - page 1 from `page-one-document`
 - page 2 from `page-two-document`
 - page 3 from `page-three-document`
-- the remaining pages as blank placeholders while the rest of the package is still being rebuilt
+- page 4 from `page-four-document`
+- page 5 from `page-five-document`
+- page 6 from `page-six-document`
+
+The export pipeline renders each page to PDF through a local Chromium-based browser and then merges the page PDFs with FPDI so portrait and landscape pages can coexist in one package.
 
 ## Why This App Exists
 
@@ -128,8 +141,8 @@ The current version already covers the core workflow, but there are a few natura
 - Search across shortcuts, workspaces, calendar entries, and notes.
 - Drag-and-drop organization in the project section.
 - Better mobile-specific sticky note behavior.
-- Richer note formatting for the sticky note or future note system.
-- Complete the remaining BPP printable pages so the full package matches the official document set without placeholder blank pages.
+- Richer note formatting for the sticky note or future note system beyond the current strike-through action.
+- Continue refining the BPP printable layout so the generated package stays visually aligned with the official document set.
 
 ## Developer Documentation
 
@@ -185,7 +198,9 @@ The saved fields are:
 - `position_y`
 - `is_collapsed`
 
-This is intentionally a simple prototype-friendly structure that can be expanded later into a richer notes feature.
+The `content` field now preserves simple strike-through formatting for highlighted text while still keeping the note as one continuous personal memo.
+
+This is still intentionally a simple prototype-friendly structure that can be expanded later into a richer notes feature.
 
 ### BPP Notes
 
@@ -206,6 +221,8 @@ The extraction import flow depends on these sections being present exactly:
 - `TOTALS`
 
 If the structured extraction is invalid, the BPP draft review is saved, but the supplier quote and appendix tables are not replaced until a valid result is applied.
+
+PDF package export depends on a locally installed Chromium-based browser. The app checks `BPP_PDF_BROWSER_PATH` first, then falls back to common Chrome and Edge paths on Windows.
 
 ### Test User Login
 
@@ -284,6 +301,7 @@ The default local `.env` values should use:
 ```dotenv
 DB_CONNECTION=sqlite
 DB_DATABASE=database/database.sqlite
+BPP_PDF_BROWSER_PATH='C:\Program Files\Google\Chrome\Application\chrome.exe'
 ```
 
 ### Production MariaDB Settings
@@ -315,6 +333,8 @@ npm run build
 
 Laravel's default migrations remain safe for MariaDB in production because they use framework schema abstractions rather than SQLite-only column features.
 
+If you plan to use BPP PDF export in production, also set `BPP_PDF_BROWSER_PATH` to the full path of the server's Chrome or Edge binary.
+
 ### Commands Used During Setup
 
 The initial auth setup used these commands:
@@ -334,4 +354,5 @@ Useful BPP-related development commands:
 php artisan view:clear
 php artisan route:list --path=bpp
 php artisan test tests/Feature/BppTest.php --filter=quotation_extraction
+php artisan test tests/Feature/BppTest.php --filter=pdf
 ```
