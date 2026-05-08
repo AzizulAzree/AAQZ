@@ -76,32 +76,6 @@ class BppPrintableViewService
         ];
     }
 
-    public function activeAppendix(Bpp $bpp): ?array
-    {
-        $appendixType = $bpp->activeAppendixType();
-
-        if ($appendixType === null) {
-            return null;
-        }
-
-        $previewTitle = Bpp::appendixLabelForType($appendixType) ?? strtoupper($appendixType);
-        $view = match ($appendixType) {
-            'c2' => 'bpp.printables.partials.pages.c2-page',
-            'c3' => 'bpp.printables.partials.pages.c3-page',
-            'c4' => 'bpp.printables.partials.pages.c4-page',
-            default => null,
-        };
-
-        if ($view === null) {
-            return null;
-        }
-
-        return [
-            'view' => $view,
-            'data' => $this->appendix($bpp, $appendixType, $previewTitle),
-        ];
-    }
-
     private function checklistItems(Bpp $bpp): array
     {
         $activeAppendixType = $bpp->activeAppendixType();

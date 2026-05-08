@@ -64,11 +64,74 @@ document.addEventListener('alpine:init', () => {
         },
 
         init() {
+            this.renderEditorContent();
             this.clampPosition();
 
             window.addEventListener('resize', () => {
                 this.clampPosition();
             });
+        },
+
+        renderEditorContent() {
+            if (! this.$refs.editor) {
+                return;
+            }
+
+            this.$refs.editor.innerHTML = this.formatInitialContent(this.content);
+        },
+
+        formatInitialContent(content) {
+            const value = `${content ?? ''}`;
+
+            if (value.trim() === '') {
+                return '';
+            }
+
+            if (/<[a-z][\s\S]*>/i.test(value)) {
+                return value;
+            }
+
+            return this.escapeHtml(value).replace(/\n/g, '<br>');
+        },
+
+        escapeHtml(value) {
+            return value
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        },
+
+        queueSaveFromEditor() {
+            this.syncContentFromEditor();
+            this.queueSave();
+        },
+
+        syncContentFromEditor() {
+            if (! this.$refs.editor) {
+                return;
+            }
+
+            const html = this.$refs.editor.innerHTML;
+            const normalized = html === '<br>' ? '' : html;
+            this.content = normalized.trim() === '' ? '' : normalized;
+        },
+
+        handlePaste(event) {
+            event.preventDefault();
+
+            const text = event.clipboardData?.getData('text/plain')
+                ?? window.clipboardData?.getData('Text')
+                ?? '';
+
+            document.execCommand('insertText', false, text);
+        },
+
+        applyStrike() {
+            this.$refs.editor?.focus();
+            document.execCommand('strikeThrough');
+            this.queueSaveFromEditor();
         },
 
         startDrag(event) {
@@ -128,6 +191,7 @@ document.addEventListener('alpine:init', () => {
                 this.saveTimer = null;
             }
 
+            this.syncContentFromEditor();
             this.isSaving = true;
 
             try {

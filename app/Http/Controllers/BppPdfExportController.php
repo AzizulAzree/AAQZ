@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bpp;
-use App\Services\BppPrintableViewService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\View;
@@ -14,7 +13,7 @@ use Symfony\Component\Process\Process;
 
 class BppPdfExportController extends Controller
 {
-    public function export(Bpp $bpp, BppPrintableViewService $printableViewService): Response
+    public function export(Bpp $bpp): Response
     {
         @set_time_limit(300);
 
@@ -128,36 +127,6 @@ class BppPdfExportController extends Controller
 </head>
 <body>
 {$content}
-</body>
-</html>
-HTML;
-    }
-
-    private function blankPageHtml(string $orientation): string
-    {
-        $width = $orientation === 'landscape' ? '297mm' : '210mm';
-        $height = $orientation === 'landscape' ? '210mm' : '297mm';
-
-        return <<<HTML
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <style>
-        @page {
-            size: A4 {$orientation};
-            margin: 0;
-        }
-
-        html, body {
-            margin: 0;
-            padding: 0;
-            background: #fff;
-        }
-    </style>
-</head>
-<body>
-    <div style="width: {$width}; height: {$height}; background: #fff;"></div>
 </body>
 </html>
 HTML;

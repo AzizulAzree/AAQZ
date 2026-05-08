@@ -107,26 +107,53 @@
         padding: 0 1rem 1rem;
     }
 
+    .sticky-note-toolbar {
+        margin-bottom: 0.45rem;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .sticky-note-toolbar-button {
+        border-radius: 9999px;
+        border: 1px solid rgba(146, 64, 14, 0.16);
+        background: rgba(255, 255, 255, 0.74);
+        padding: 0.22rem 0.6rem;
+        font-family: inherit;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: rgba(120, 53, 15, 0.9);
+        line-height: 1.2;
+        transition: background-color 150ms ease, border-color 150ms ease;
+    }
+
+    .sticky-note-toolbar-button:hover {
+        border-color: rgba(180, 83, 9, 0.28);
+        background: rgba(255, 255, 255, 0.9);
+    }
+
     .sticky-note-editor {
         min-height: 15rem;
         width: 100%;
-        resize: none;
         border-radius: 0.95rem;
         border: 1px solid rgba(146, 64, 14, 0.16);
         background: rgba(255, 251, 235, 0.74);
         padding: 0.95rem 1rem;
-        font-family: 'Caveat', 'Segoe Print', 'Bradley Hand', cursive;
-        font-size: 1.45rem;
-        font-weight: 600;
-        line-height: 1.35;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 500;
+        line-height: 1.5;
         letter-spacing: 0.01em;
         color: #451a03;
         outline: none;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
     }
 
-    .sticky-note-editor::placeholder {
+    .sticky-note-editor:empty::before {
+        content: attr(data-placeholder);
         color: rgba(120, 53, 15, 0.58);
+        pointer-events: none;
     }
 
     .sticky-note-editor:focus {

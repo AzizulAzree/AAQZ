@@ -43,15 +43,30 @@
         </header>
 
         <div class="sticky-note-body" x-show="! isCollapsed" x-transition.opacity.duration.150ms>
+            <div class="sticky-note-toolbar">
+                <button
+                    type="button"
+                    class="sticky-note-toolbar-button"
+                    @click="applyStrike()"
+                    title="{{ __('Strike selected text') }}"
+                >
+                    {{ __('Strike') }}
+                </button>
+            </div>
+
             <label class="sr-only" for="sticky-note-editor">{{ __('Sticky note content') }}</label>
-            <textarea
+            <div
                 id="sticky-note-editor"
+                x-ref="editor"
                 class="sticky-note-editor"
-                x-model="content"
-                @input="queueSave()"
-                rows="10"
-                placeholder="{{ __('Write anything here. Changes save automatically.') }}"
-            ></textarea>
+                contenteditable="true"
+                role="textbox"
+                aria-multiline="true"
+                data-placeholder="{{ __('Write anything here. Changes save automatically.') }}"
+                @input="queueSaveFromEditor()"
+                @blur="queueSave(true)"
+                @paste="handlePaste($event)"
+            ></div>
         </div>
     </section>
 </div>

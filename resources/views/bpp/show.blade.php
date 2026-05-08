@@ -77,9 +77,7 @@
                             <div>
                                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                                     <h1 class="bpp-workspace-title">{{ $bpp->title }}</h1>
-                                    <a href="{{ route('bpp.printables.preview', $bpp) }}" class="bpp-secondary-button w-fit" target="_blank" rel="noopener noreferrer">
-                                        {{ __('Open Blank A4 Page') }}
-                                    </a>
+                                    <x-primary-button form="bpp-draft-form">{{ __('Save Draft') }}</x-primary-button>
                                     <a href="{{ route('bpp.pdf', $bpp) }}" class="bpp-primary-button w-fit" target="_blank" rel="noopener noreferrer">
                                         {{ __('Generate PDF') }}
                                     </a>
@@ -107,15 +105,15 @@
                         </div>
                     </div>
 
-                    <form method="POST" action="{{ route('bpp.update', $bpp) }}" class="space-y-4">
+                    <form id="bpp-draft-form" method="POST" action="{{ route('bpp.update', $bpp) }}" class="space-y-4">
                         @csrf
                         @method('PUT')
                         <input type="hidden" name="title" value="{{ $bpp->title }}">
 
-                        <details open class="bpp-group">
+                        <details class="bpp-group">
                             <summary class="bpp-group-summary">
                                 <div class="bpp-group-summary-copy">
-                                    <h2 class="bpp-group-title">{{ __('Top Section & A. Perihal Pemohon') }}</h2>
+                                    <h2 class="bpp-group-title">{{ __('A. Perihal Pemohon') }}</h2>
                                 </div>
                                 <span class="bpp-group-toggle" aria-hidden="true">
                                     <svg viewBox="0 0 20 20" fill="none" class="h-4 w-4">
@@ -213,7 +211,7 @@
                             </div>
                         </details>
 
-                        <details open class="bpp-group">
+                        <details class="bpp-group">
                             <summary class="bpp-group-summary">
                                 <div class="bpp-group-summary-copy">
                                     <h2 class="bpp-group-title">{{ __('B(I) Perihal Perolehan') }}</h2>
@@ -302,7 +300,7 @@
                         </details>
 
                         @if ($bpp->requiresBiiSection() || in_array(old('kaedah_perolehan', $bpp->kaedah_perolehan), ['tender', 'pembekal_tunggal_rundingan_terus'], true))
-                            <details open class="bpp-group">
+                            <details class="bpp-group">
                                 <summary class="bpp-group-summary">
                                     <div class="bpp-group-summary-copy">
                                         <h2 class="bpp-group-title">{{ __('B(II) Maklumat Tambahan') }}</h2>
@@ -374,12 +372,9 @@
                             </details>
                         @endif
 
-                        <div class="bpp-action-bar">
-                            <x-primary-button>{{ __('Save Draft') }}</x-primary-button>
-                        </div>
                     </form>
 
-                    <details open class="bpp-group" x-data="{
+                    <details class="bpp-group" x-data="{
                         copiedPrompt: false,
                         async copyPrompt() {
                             const value = this.$refs.extractionPrompt?.value ?? '';
@@ -661,7 +656,7 @@
                             </div>
                         </details>
 
-                        <details open class="bpp-group">
+                        <details class="bpp-group">
                             <summary class="bpp-group-summary">
                                 <div class="bpp-group-summary-copy">
                                     <h2 class="bpp-group-title">{{ __('D. Pembekal Yang Disyorkan') }}</h2>
@@ -733,7 +728,7 @@
                             </div>
                         </details>
 
-                        <details open class="bpp-group">
+                        <details class="bpp-group">
                             <summary class="bpp-group-summary">
                                 <div class="bpp-group-summary-copy">
                                     <h2 class="bpp-group-title">{{ __('C1. Kaedah Kajian Pasaran') }}</h2>
