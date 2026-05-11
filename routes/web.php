@@ -8,6 +8,7 @@ use App\Http\Controllers\BppPdfExportController;
 use App\Http\Controllers\BppPrintablePreviewController;
 use App\Http\Controllers\BppQuotationExtractionController;
 use App\Http\Controllers\BppSupplierQuoteController;
+use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StickyNoteController;
@@ -19,6 +20,10 @@ Route::get('/', function () {
         ? to_route('dashboard')
         : redirect()->route('login');
 })->name('home');
+
+Route::get('/portfolio', [PortfolioController::class, 'redirect'])->name('portfolio.redirect');
+Route::get('/portfolio/{slug}', [PortfolioController::class, 'legacyRedirect'])->name('portfolio.legacy');
+Route::get('/azizulazree', [PortfolioController::class, 'show'])->name('portfolio.show');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

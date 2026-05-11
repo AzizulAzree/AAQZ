@@ -21,6 +21,9 @@
                     <x-nav-link :href="route('project.index')" :active="request()->routeIs('project.*')">
                         {{ __('Project') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('portfolio.show')" :active="request()->routeIs('portfolio.*')">
+                        {{ __('Portfolio') }}
+                    </x-nav-link>
                     @if (Auth::user()->isAdmin())
                         <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
                             {{ __('Settings') }}
@@ -98,6 +101,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('project.index')" :active="request()->routeIs('project.*')">
                 {{ __('Project') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('portfolio.show')" :active="request()->routeIs('portfolio.*')">
+                {{ __('Portfolio') }}
             </x-responsive-nav-link>
             @if (Auth::user()->isAdmin())
                 <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
