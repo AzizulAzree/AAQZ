@@ -8,8 +8,8 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Schema;
@@ -44,6 +44,19 @@ class User extends Authenticatable
             || ($firstUserId !== null && $this->id === $firstUserId);
     }
 
+    public function canAccessFinancePage(): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        if (! Schema::hasTable('finance_page_accesses')) {
+            return false;
+        }
+
+        return $this->financePageAccess()->exists();
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -75,5 +88,39 @@ class User extends Authenticatable
     public function stickyNote(): HasOne
     {
         return $this->hasOne(StickyNote::class);
+    }
+
+    public function orderingSmartForm(): HasOne
+    {
+        return $this->hasOne(OrderingSmartForm::class);
+    }
+
+    public function orderingSmartFormSubmissions(): HasMany
+    {
+        return $this->hasMany(OrderingSmartFormSubmission::class)->latest('submitted_at');
+    }
+
+    public function financePageAccess(): HasOne
+    {
+        return $this->hasOne(FinancePageAccess::class);
+    }
+
+    public function financePeriods(): HasMany
+    {
+        return $this->hasMany(FinancePeriod::class)
+            ->orderByDesc('period_year')
+            ->orderByDesc('period_month');
+    }
+
+    public function financeCommitmentCategories(): HasMany
+    {
+        return $this->hasMany(FinanceCommitmentCategory::class)
+            ->orderBy('sort_order')
+            ->orderBy('name');
+    }
+
+    public function financeRecords(): HasMany
+    {
+        return $this->hasMany(FinanceRecord::class)->latest('recorded_on');
     }
 }

@@ -21,6 +21,14 @@
                     <x-nav-link :href="route('project.index')" :active="request()->routeIs('project.*')">
                         {{ __('Project') }}
                     </x-nav-link>
+                    @if (Auth::user()->canAccessFinancePage())
+                        <x-nav-link :href="route('finance.index')" :active="request()->routeIs('finance.*')">
+                            {{ __('Finance') }}
+                        </x-nav-link>
+                    @endif
+                    <x-nav-link :href="route('forms.index')" :active="request()->routeIs('forms.*')">
+                        {{ __('Form') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('portfolio.show')" :active="request()->routeIs('portfolio.*')">
                         {{ __('Portfolio') }}
                     </x-nav-link>
@@ -101,6 +109,14 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('project.index')" :active="request()->routeIs('project.*')">
                 {{ __('Project') }}
+            </x-responsive-nav-link>
+            @if (Auth::user()->canAccessFinancePage())
+                <x-responsive-nav-link :href="route('finance.index')" :active="request()->routeIs('finance.*')">
+                    {{ __('Finance') }}
+                </x-responsive-nav-link>
+            @endif
+            <x-responsive-nav-link :href="route('forms.index')" :active="request()->routeIs('forms.*')">
+                {{ __('Form') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('portfolio.show')" :active="request()->routeIs('portfolio.*')">
                 {{ __('Portfolio') }}

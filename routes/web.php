@@ -8,6 +8,8 @@ use App\Http\Controllers\BppPdfExportController;
 use App\Http\Controllers\BppPrintablePreviewController;
 use App\Http\Controllers\BppQuotationExtractionController;
 use App\Http\Controllers\BppSupplierQuoteController;
+use App\Http\Controllers\FinanceController;
+use App\Http\Controllers\FormController;
 use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProfileController;
@@ -21,6 +23,8 @@ Route::get('/', function () {
         : redirect()->route('login');
 })->name('home');
 
+Route::get('/ordering/{user}/{token}', [FormController::class, 'show'])->name('forms.public');
+Route::post('/ordering/{user}/{token}', [FormController::class, 'submit'])->name('forms.public.submit');
 Route::get('/portfolio', [PortfolioController::class, 'redirect'])->name('portfolio.redirect');
 Route::get('/portfolio/{slug}', [PortfolioController::class, 'legacyRedirect'])->name('portfolio.legacy');
 Route::get('/azizulazree', [PortfolioController::class, 'show'])->name('portfolio.show');
@@ -54,6 +58,12 @@ Route::middleware('auth')->group(function () {
     Route::put('/bpp/{bpp}/supplier-quotes/{supplierQuote}/select', [BppSupplierQuoteController::class, 'select'])->name('bpp.supplier-quotes.select');
     Route::put('/sticky-note', [StickyNoteController::class, 'update'])->name('sticky-note.update');
     Route::get('/project', [ProjectController::class, 'index'])->name('project.index');
+    Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+    Route::put('/finance/access', [FinanceController::class, 'updateAccess'])->name('finance.access.update');
+    Route::post('/finance/records', [FinanceController::class, 'storeRecord'])->name('finance.records.store');
+    Route::put('/finance/carry-balance', [FinanceController::class, 'updateCarryBalance'])->name('finance.carry-balance.update');
+    Route::get('/form', [FormController::class, 'index'])->name('forms.index');
+    Route::post('/form', [FormController::class, 'store'])->name('forms.store');
     Route::post('/project/workspaces', [ProjectController::class, 'storeWorkspace'])->name('project.workspaces.store');
     Route::post('/project/nodes', [ProjectController::class, 'storeNode'])->name('project.nodes.store');
     Route::get('/project/shortcuts/{workspaceNode}', [ProjectController::class, 'openShortcut'])->name('project.shortcuts.open');
