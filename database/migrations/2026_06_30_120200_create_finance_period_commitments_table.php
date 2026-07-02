@@ -10,8 +10,13 @@ return new class extends Migration
     {
         Schema::create('finance_period_commitments', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('finance_period_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('finance_commitment_category_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('finance_period_id')
+                ->constrained(indexName: 'fp_commitments_period_fk')
+                ->cascadeOnDelete();
+            $table->foreignId('finance_commitment_category_id')
+                ->nullable()
+                ->constrained(indexName: 'fp_commitments_category_fk')
+                ->nullOnDelete();
             $table->string('name_snapshot');
             $table->decimal('amount', 12, 2);
             $table->string('status', 16)->default('unpaid');
