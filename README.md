@@ -1,16 +1,17 @@
 # AAQZ
 
-AAQZ is a private Laravel 13 workspace app for keeping everyday planning and procurement work in one place. It combines a calendar view for reminders and follow-ups, a project area for organizing workspaces and shortcuts, a BPP procurement workspace with printable/exportable form flows, and a personal sticky note that follows the signed-in user across pages and devices.
+AAQZ is a private Laravel 13 workspace app for keeping everyday planning and procurement work in one place. It combines a calendar view for reminders and follow-ups, a project area for organizing workspaces and shortcuts, a BPP procurement workspace with printable/exportable form flows, a public portfolio page, and a personal sticky note that follows the signed-in user across pages and devices.
 
 The app is designed around a simple idea: reduce context switching. Instead of spreading quick reminders, recurring follow-ups, bookmarked links, and admin tasks across several tools, AAQZ keeps them inside one authenticated interface.
 
 ## App Overview
 
-AAQZ is currently built around four core areas:
+AAQZ is currently built around five core areas:
 
 - `Calendar`: a monthly planning view with reminder summaries, quick entry creation, and follow-up support.
 - `Project`: a lightweight workspace organizer for folders, shortcuts, and recently opened links.
 - `BPP`: a procurement request workspace for managing BPP data, supplier comparison drafts, appendix rows, quotation extraction review, and printable/PDF outputs.
+- `Portfolio`: a public scroll-based portfolio page for Azizul Azree, available outside authentication.
 - `Sticky note`: a draggable personal note that auto-saves, supports quick strike-through formatting, and stays with the user across authenticated pages.
 
 The app uses server-rendered Laravel Blade views with Alpine.js for focused interactive behavior where needed.
@@ -41,6 +42,14 @@ The app uses server-rendered Laravel Blade views with Alpine.js for focused inte
 - Add shortcuts inside folders.
 - Track recently opened shortcuts for quick return access.
 - Keep project links grouped in a cleaner, less cluttered structure than a traditional bookmarks list.
+
+### Public Portfolio Page
+
+- Public portfolio available at `/azizulazree` without authentication.
+- Legacy `/portfolio` and `/portfolio/azizul-azree` paths redirect to the new public route.
+- Full-screen scroll presentation with section-based storytelling.
+- Includes storefront previews, infrastructure notes, previous roles, contact details, and a reveal footer treatment.
+- Uses optimized local thumbnails for the showcased storefront work.
 
 ### BPP Procurement Workspace
 
@@ -108,6 +117,15 @@ The current merged export flow is browser-rendered and produces a six-page PDF p
 - page 6 from `page-six-document`
 
 The export pipeline renders each page to PDF through a local Chromium-based browser and then merges the page PDFs with FPDI so portrait and landscape pages can coexist in one package.
+
+### Public Routes
+
+The app also exposes a small set of public routes outside authentication:
+
+- `/azizulazree`
+- `/portfolio`
+- `/portfolio/azizul-azree`
+- `/ordering/{user}/{token}`
 
 ## Why This App Exists
 
@@ -295,6 +313,16 @@ php artisan app:create-user
 ```bash
 composer run dev
 ```
+
+If you want to open the public portfolio directly during local development, use:
+
+```bash
+php artisan serve
+```
+
+Then visit:
+
+- `/azizulazree`
 
 The default local `.env` values should use:
 

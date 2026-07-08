@@ -23,7 +23,7 @@ class FinanceDataTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('No records yet');
-        $response->assertSee('Current Month Salary');
+        $response->assertSee('Salary This Month');
 
         $this->assertDatabaseCount('finance_periods', 0);
         $this->assertDatabaseCount('finance_commitment_categories', 0);

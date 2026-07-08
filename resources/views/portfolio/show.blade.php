@@ -300,6 +300,114 @@
                 opacity: 0.72;
             }
 
+            .portfolio-mobile-history {
+                display: none;
+            }
+
+            .portfolio-diagonal-shell {
+                margin-top: 2rem;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 44rem;
+            }
+
+            .portfolio-diagonal-outer {
+                --diag-size: min(67vmin, 38rem);
+                --diag-item-width: calc(var(--diag-size) * 0.7463);
+                --diag-shift-x: calc(var(--diag-size) * -0.4478);
+                --diag-start-y: calc(var(--diag-size) * 0.5224);
+                --diag-step-2: calc(var(--diag-size) * 0.2388);
+                --diag-step-3: calc(var(--diag-size) * 0.5075);
+                --diag-step-4: calc(var(--diag-size) * 0.7463);
+                --diag-end-y: calc(var(--diag-size) * 0.1642);
+                width: var(--diag-size);
+                height: var(--diag-size);
+                overflow-x: hidden;
+                overflow-y: auto;
+                scroll-behavior: smooth;
+                -webkit-overflow-scrolling: touch;
+                scroll-snap-type: y proximity;
+                scrollbar-width: none;
+                color: var(--page-fg, #ffffff);
+                border: 1px solid currentColor;
+                border-radius: 50%;
+                background: color-mix(in srgb, var(--page-fg, #ffffff) 8%, transparent);
+                box-shadow: inset 0 -5vmin 5vmin -5vmin rgba(0, 0, 0, 0.35);
+                transform: rotate(-45deg);
+            }
+
+            .portfolio-diagonal-outer::-webkit-scrollbar {
+                display: none;
+            }
+
+            .portfolio-diagonal-inner {
+                min-height: max-content;
+                padding-bottom: calc(var(--diag-size) * 0.24);
+                font-size: 1rem;
+                transform: rotate(45deg);
+                transform-origin: center;
+            }
+
+            .portfolio-diagonal-item {
+                width: var(--diag-item-width);
+                margin: 1rem;
+                transform: translateX(var(--diag-shift-x));
+                scroll-snap-align: start;
+            }
+
+            .portfolio-diagonal-item:nth-child(1) {
+                margin-top: var(--diag-start-y);
+            }
+
+            .portfolio-diagonal-item:nth-child(2) {
+                margin-left: var(--diag-step-2);
+            }
+
+            .portfolio-diagonal-item:nth-child(3) {
+                margin-left: var(--diag-step-3);
+            }
+
+            .portfolio-diagonal-item:nth-child(4) {
+                margin-left: var(--diag-step-4);
+                margin-bottom: var(--diag-end-y);
+            }
+
+            .portfolio-diagonal-content {
+                padding: 0.35rem 0.25rem;
+            }
+
+            .portfolio-diagonal-title {
+                margin: 0;
+                font-size: 0.92rem;
+                font-weight: 700;
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+                color: color-mix(in srgb, var(--page-fg, #ffffff) 92%, transparent);
+            }
+
+            .portfolio-diagonal-role {
+                margin: 0.9rem 0 0;
+                font-size: clamp(1.05rem, 2.2vmin, 1.35rem);
+                line-height: 1.35;
+                font-weight: 500;
+                color: color-mix(in srgb, var(--page-fg, #ffffff) 84%, transparent);
+            }
+
+            .portfolio-diagonal-meta {
+                margin: 0.8rem 0 0;
+                font-size: 0.78rem;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: color-mix(in srgb, var(--page-fg, #ffffff) 62%, transparent);
+            }
+
+            .portfolio-previous-grid,
+            .portfolio-mobile-history {
+                display: none !important;
+            }
+
             .portfolio-link-list {
                 display: grid;
                 gap: 0.85rem;
@@ -726,6 +834,60 @@
                 transform: scale(1.25);
             }
 
+            @media (prefers-reduced-motion: no-preference) {
+                [data-scroll-reveal] {
+                    --reveal-x: 0px;
+                    --reveal-y: 0px;
+                    --reveal-scale: 1;
+                    --reveal-blur: 24px;
+                    --reveal-delay: 0ms;
+                    opacity: 0;
+                    filter: blur(var(--reveal-blur));
+                    transform: translate3d(var(--reveal-x), var(--reveal-y), 0) scale(var(--reveal-scale));
+                    transition:
+                        opacity 780ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay),
+                        filter 900ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay),
+                        transform 900ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay);
+                    will-change: transform, filter, opacity;
+                }
+
+                [data-scroll-reveal].is-visible {
+                    opacity: 1;
+                    filter: blur(0);
+                    transform: translate3d(0, 0, 0) scale(1);
+                }
+
+                [data-scroll-reveal="left"] {
+                    --reveal-x: 9vw;
+                    --reveal-scale: 0.985;
+                }
+
+                [data-scroll-reveal="right"] {
+                    --reveal-x: -9vw;
+                    --reveal-scale: 0.985;
+                }
+
+                [data-scroll-reveal="up"] {
+                    --reveal-y: 3.4rem;
+                    --reveal-scale: 0.992;
+                }
+
+                [data-scroll-reveal="down"] {
+                    --reveal-y: -3.4rem;
+                    --reveal-scale: 0.992;
+                }
+
+                [data-scroll-reveal="soft-left"] {
+                    --reveal-x: 5vw;
+                    --reveal-blur: 16px;
+                }
+
+                [data-scroll-reveal="soft-right"] {
+                    --reveal-x: -5vw;
+                    --reveal-blur: 16px;
+                }
+            }
+
             @media (prefers-reduced-motion: reduce) {
                 html {
                     scroll-behavior: auto;
@@ -775,19 +937,93 @@
                     grid-template-columns: repeat(2, minmax(0, 1fr));
                 }
 
+                .portfolio-previous-grid {
+                    display: none;
+                }
+
+                .portfolio-diagonal-shell {
+                    min-height: 34rem;
+                }
+
+                .portfolio-diagonal-outer {
+                    --diag-mobile-size: min(88vw, 25rem);
+                    --diag-mobile-width-ratio: 0.56;
+                    --diag-mobile-shift-ratio: -0.435;
+                    --diag-mobile-start-ratio: 0.34;
+                    --diag-mobile-step-2-ratio: 0.31;
+                    --diag-mobile-step-3-ratio: 0.61;
+                    --diag-mobile-step-4-ratio: 0.81;
+                    --diag-mobile-end-ratio: 0.1;
+                    --diag-size: var(--diag-mobile-size);
+                    --diag-item-width: calc(var(--diag-size) * var(--diag-mobile-width-ratio));
+                    --diag-shift-x: calc(var(--diag-size) * var(--diag-mobile-shift-ratio));
+                    --diag-start-y: calc(var(--diag-size) * 3 * var(--diag-mobile-start-ratio));
+                    --diag-step-2: calc(var(--diag-size) * var(--diag-mobile-step-2-ratio));
+                    --diag-step-3: calc(var(--diag-size) * var(--diag-mobile-step-3-ratio));
+                    --diag-step-4: calc(var(--diag-size) * var(--diag-mobile-step-4-ratio));
+                    --diag-end-y: calc(var(--diag-size) * var(--diag-mobile-end-ratio));
+                    padding: 0.8rem;
+                }
+
+                .portfolio-diagonal-title {
+                    font-size: 0.72rem;
+                    letter-spacing: 0.12em;
+                }
+
+                .portfolio-diagonal-role {
+                    margin-top: 0.7rem;
+                    font-size: 0.94rem;
+                    line-height: 1.28;
+                }
+
+                .portfolio-diagonal-meta {
+                    margin-top: 0.65rem;
+                    font-size: 0.68rem;
+                    letter-spacing: 0.12em;
+                }
+
+                .portfolio-diagonal-content {
+                    padding: 0.35rem 0.2rem 0.25rem;
+                }
+
+                .portfolio-diagonal-item .portfolio-badge-row {
+                    gap: 0.35rem;
+                    padding-left: 0;
+                    padding-right: 0;
+                    padding-bottom: 0;
+                }
+
+                .portfolio-diagonal-item .portfolio-badge {
+                    min-height: 1.55rem;
+                    padding: 0.28rem 0.62rem 0.28rem 0.52rem;
+                    font-size: 0.62rem;
+                    letter-spacing: 0.08em;
+                }
+
+                .portfolio-diagonal-item .portfolio-badge::before {
+                    width: 0.22rem;
+                    height: 0.22rem;
+                    margin-right: 0.35rem;
+                }
+
                 .portfolio-marquee {
                     mask-image: none;
                     -webkit-mask-image: none;
+                    overflow: hidden;
+                    margin-left: -1.5rem;
+                    margin-right: -1.5rem;
+                    padding-left: 1.5rem;
                 }
 
                 .portfolio-marquee-track {
                     gap: 0.75rem;
-                    animation-duration: 24s;
+                    animation-duration: 20s;
+                    padding-right: 1.5rem;
                 }
 
                 .portfolio-marquee .portfolio-card {
-                    width: 14.5rem;
-                    min-height: 11rem;
+                    width: min(78vw, 16rem);
+                    min-height: 10.5rem;
                 }
 
                 .portfolio-badge {
@@ -894,10 +1130,10 @@
                         <span class="portfolio-motion-ring" data-motion-type="ring" data-motion-speed="0.00012" data-motion-range-x="18" data-motion-range-y="14" data-motion-phase="0.8" style="right: 18%; top: 22%; width: 20rem; height: 20rem;"></span>
                     </div>
                     <div class="portfolio-frame">
-                        <p class="portfolio-kicker">Web Developer</p>
-                        <h1 class="portfolio-title">Azizul Azree</h1>
-                        <p class="portfolio-copy">I work mainly across Shopify, WordPress, Laravel, PHP, MySQL, and Codex.</p>
-                        <p class="portfolio-copy">Based in Kajang, Selangor, Malaysia.</p>
+                        <p class="portfolio-kicker" data-scroll-reveal="soft-left">Web Developer</p>
+                        <h1 class="portfolio-title" data-scroll-reveal="right">Azizul Azree</h1>
+                        <p class="portfolio-copy" data-scroll-reveal="up">I work mainly across Shopify, WordPress, Laravel, PHP, MySQL, and Codex.</p>
+                        <p class="portfolio-copy" data-scroll-reveal="soft-right">Based in Kajang, Selangor, Malaysia.</p>
                     </div>
                 </div>
             </section>
@@ -915,14 +1151,14 @@
                         class="portfolio-frame"
                     >
                         <div class="portfolio-current-layout">
-                            <div class="portfolio-current-meta">
+                            <div class="portfolio-current-meta" data-scroll-reveal="left">
                                 <p class="portfolio-current-label">E-commerce &amp; Shopify</p>
                                 <h2 class="portfolio-current-role">Web Developer</h2>
                                 <p class="portfolio-current-company">Jakel Wholesale &amp; Distribution Centre</p>
                                 <p class="portfolio-current-date">Since Feb 2026</p>
                             </div>
 
-                            <div class="portfolio-current-carousel">
+                            <div class="portfolio-current-carousel" data-scroll-reveal="right">
                                 <div class="portfolio-carousel">
                                     <div class="portfolio-carousel-track" data-carousel-track>
                                         <div class="portfolio-carousel-slide">
@@ -1009,10 +1245,10 @@
                         <span class="portfolio-motion-orbiter" data-motion-type="orbiter" data-motion-speed="0.0001" data-motion-phase="2.4" data-motion-orbit-radius="3.4" style="left: 42%; top: 26%; width: 8rem; height: 8rem;"></span>
                     </div>
                     <div class="portfolio-frame">
-                        <p class="portfolio-kicker">Laravel, PHP &amp; MySQL</p>
-                        <h2 class="portfolio-title">Infrastructure</h2>
-                        <p class="portfolio-copy">This is the side of the work people usually do not see: keeping older systems going, rebuilding the parts that need replacing, and sorting out the logic behind daily use.</p>
-                        <div class="portfolio-marquee">
+                        <p class="portfolio-kicker" data-scroll-reveal="soft-right">Laravel, PHP &amp; MySQL</p>
+                        <h2 class="portfolio-title" data-scroll-reveal="left">Infrastructure</h2>
+                        <p class="portfolio-copy" data-scroll-reveal="up">This is the side of the work people usually do not see: keeping older systems going, rebuilding the parts that need replacing, and sorting out the logic behind daily use.</p>
+                        <div class="portfolio-marquee" data-scroll-reveal="down">
                             <div class="portfolio-marquee-track">
                                 <div class="portfolio-card">
                                     <p class="portfolio-card-label">PHP/MySQL CRM</p>
@@ -1077,10 +1313,10 @@
                         <span class="portfolio-motion-wave" data-motion-type="wave" data-motion-speed="0.00012" data-motion-range-x="9" data-motion-range-y="12" data-motion-phase="3.2" style="top: 30%; height: 8rem;"></span>
                     </div>
                     <div class="portfolio-frame">
-                        <p class="portfolio-kicker">Previous Roles</p>
-                        <h2 class="portfolio-title">Previous Work</h2>
-                        <p class="portfolio-copy">Work across WordPress, Laravel, internal systems, support, and web applications.</p>
-                        <div class="portfolio-grid">
+                        <p class="portfolio-kicker" data-scroll-reveal="soft-left">Previous Roles</p>
+                        <h2 class="portfolio-title" data-scroll-reveal="right">Previous Work</h2>
+                        <p class="portfolio-copy" data-scroll-reveal="up">Work across WordPress, Laravel, internal systems, support, and web applications.</p>
+                        <div class="portfolio-grid portfolio-previous-grid" data-scroll-reveal="down">
                             <div class="portfolio-card portfolio-card-tall" style="grid-column: span 3 / span 3;">
                                 <p class="portfolio-card-label">K Al Walid Group</p>
                                 <p class="portfolio-card-copy">Web Developer &amp; IT Executive</p>
@@ -1124,6 +1360,150 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="portfolio-mobile-history" data-scroll-reveal="down">
+                            <div class="portfolio-mobile-history-track">
+                                <div class="portfolio-card portfolio-card-tall">
+                                    <p class="portfolio-card-label">K Al Walid Group</p>
+                                    <p class="portfolio-card-copy">Web Developer &amp; IT Executive</p>
+                                    <p class="portfolio-card-meta">2025 - 2026</p>
+                                    <div class="portfolio-badge-row">
+                                        <span class="portfolio-badge">WordPress</span>
+                                        <span class="portfolio-badge">Laravel</span>
+                                        <span class="portfolio-badge">PHP</span>
+                                        <span class="portfolio-badge">MySQL</span>
+                                    </div>
+                                </div>
+                                <div class="portfolio-card portfolio-card-tall">
+                                    <p class="portfolio-card-label">Bio Fluid Sdn Bhd</p>
+                                    <p class="portfolio-card-copy">Website Developer &amp; Executive IT Support</p>
+                                    <p class="portfolio-card-meta">2022 - 2025</p>
+                                    <div class="portfolio-badge-row">
+                                        <span class="portfolio-badge">WordPress</span>
+                                        <span class="portfolio-badge">Multiple Sites</span>
+                                        <span class="portfolio-badge">Custom Features</span>
+                                        <span class="portfolio-badge">IT Support</span>
+                                    </div>
+                                </div>
+                                <div class="portfolio-card portfolio-card-tall">
+                                    <p class="portfolio-card-label">Honsbridge International School</p>
+                                    <p class="portfolio-card-copy">Web Developer cum IT/Admin Support</p>
+                                    <p class="portfolio-card-meta">2019 - 2022</p>
+                                    <div class="portfolio-badge-row">
+                                        <span class="portfolio-badge">WordPress</span>
+                                        <span class="portfolio-badge">Internal Systems</span>
+                                        <span class="portfolio-badge">Staff Support</span>
+                                    </div>
+                                </div>
+                                <div class="portfolio-card portfolio-card-tall">
+                                    <p class="portfolio-card-label">Tabir Omega Sdn Bhd</p>
+                                    <p class="portfolio-card-copy">Web Developer</p>
+                                    <p class="portfolio-card-meta">2018 - 2019</p>
+                                    <div class="portfolio-badge-row">
+                                        <span class="portfolio-badge">Web Applications</span>
+                                        <span class="portfolio-badge">Frontend</span>
+                                        <span class="portfolio-badge">Backend</span>
+                                    </div>
+                                </div>
+                                <div class="portfolio-card portfolio-card-tall" aria-hidden="true">
+                                    <p class="portfolio-card-label">K Al Walid Group</p>
+                                    <p class="portfolio-card-copy">Web Developer &amp; IT Executive</p>
+                                    <p class="portfolio-card-meta">2025 - 2026</p>
+                                    <div class="portfolio-badge-row">
+                                        <span class="portfolio-badge">WordPress</span>
+                                        <span class="portfolio-badge">Laravel</span>
+                                        <span class="portfolio-badge">PHP</span>
+                                        <span class="portfolio-badge">MySQL</span>
+                                    </div>
+                                </div>
+                                <div class="portfolio-card portfolio-card-tall" aria-hidden="true">
+                                    <p class="portfolio-card-label">Bio Fluid Sdn Bhd</p>
+                                    <p class="portfolio-card-copy">Website Developer &amp; Executive IT Support</p>
+                                    <p class="portfolio-card-meta">2022 - 2025</p>
+                                    <div class="portfolio-badge-row">
+                                        <span class="portfolio-badge">WordPress</span>
+                                        <span class="portfolio-badge">Multiple Sites</span>
+                                        <span class="portfolio-badge">Custom Features</span>
+                                        <span class="portfolio-badge">IT Support</span>
+                                    </div>
+                                </div>
+                                <div class="portfolio-card portfolio-card-tall" aria-hidden="true">
+                                    <p class="portfolio-card-label">Honsbridge International School</p>
+                                    <p class="portfolio-card-copy">Web Developer cum IT/Admin Support</p>
+                                    <p class="portfolio-card-meta">2019 - 2022</p>
+                                    <div class="portfolio-badge-row">
+                                        <span class="portfolio-badge">WordPress</span>
+                                        <span class="portfolio-badge">Internal Systems</span>
+                                        <span class="portfolio-badge">Staff Support</span>
+                                    </div>
+                                </div>
+                                <div class="portfolio-card portfolio-card-tall" aria-hidden="true">
+                                    <p class="portfolio-card-label">Tabir Omega Sdn Bhd</p>
+                                    <p class="portfolio-card-copy">Web Developer</p>
+                                    <p class="portfolio-card-meta">2018 - 2019</p>
+                                    <div class="portfolio-badge-row">
+                                        <span class="portfolio-badge">Web Applications</span>
+                                        <span class="portfolio-badge">Frontend</span>
+                                        <span class="portfolio-badge">Backend</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="portfolio-diagonal-shell" data-scroll-reveal="down">
+                            <div class="portfolio-diagonal-outer" data-diagonal-scroll tabindex="0" aria-label="Previous work diagonal scroll">
+                                <div class="portfolio-diagonal-inner">
+                                    <section class="portfolio-diagonal-item">
+                                        <div class="portfolio-diagonal-content">
+                                            <p class="portfolio-diagonal-title">K Al Walid Group</p>
+                                            <p class="portfolio-diagonal-role">Web Developer &amp; IT Executive</p>
+                                            <p class="portfolio-diagonal-meta">2025 - 2026</p>
+                                            <div class="portfolio-badge-row">
+                                                <span class="portfolio-badge">WordPress</span>
+                                                <span class="portfolio-badge">Laravel</span>
+                                                <span class="portfolio-badge">PHP</span>
+                                                <span class="portfolio-badge">MySQL</span>
+                                            </div>
+                                        </div>
+                                    </section>
+                                    <section class="portfolio-diagonal-item">
+                                        <div class="portfolio-diagonal-content">
+                                            <p class="portfolio-diagonal-title">Bio Fluid Sdn Bhd</p>
+                                            <p class="portfolio-diagonal-role">Website Developer &amp; Executive IT Support</p>
+                                            <p class="portfolio-diagonal-meta">2022 - 2025</p>
+                                            <div class="portfolio-badge-row">
+                                                <span class="portfolio-badge">WordPress</span>
+                                                <span class="portfolio-badge">Multiple Sites</span>
+                                                <span class="portfolio-badge">Custom Features</span>
+                                                <span class="portfolio-badge">IT Support</span>
+                                            </div>
+                                        </div>
+                                    </section>
+                                    <section class="portfolio-diagonal-item">
+                                        <div class="portfolio-diagonal-content">
+                                            <p class="portfolio-diagonal-title">Honsbridge International School</p>
+                                            <p class="portfolio-diagonal-role">Web Developer cum IT/Admin Support</p>
+                                            <p class="portfolio-diagonal-meta">2019 - 2022</p>
+                                            <div class="portfolio-badge-row">
+                                                <span class="portfolio-badge">WordPress</span>
+                                                <span class="portfolio-badge">Internal Systems</span>
+                                                <span class="portfolio-badge">Staff Support</span>
+                                            </div>
+                                        </div>
+                                    </section>
+                                    <section class="portfolio-diagonal-item">
+                                        <div class="portfolio-diagonal-content">
+                                            <p class="portfolio-diagonal-title">Tabir Omega Sdn Bhd</p>
+                                            <p class="portfolio-diagonal-role">Web Developer</p>
+                                            <p class="portfolio-diagonal-meta">2018 - 2019</p>
+                                            <div class="portfolio-badge-row">
+                                                <span class="portfolio-badge">Web Applications</span>
+                                                <span class="portfolio-badge">Frontend</span>
+                                                <span class="portfolio-badge">Backend</span>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1137,10 +1517,10 @@
                         <span class="portfolio-motion-blob" data-motion-type="blob" data-motion-speed="0.00014" data-motion-range-x="16" data-motion-range-y="14" data-motion-phase="2.2" style="right: 12%; top: 14%; width: 10rem; height: 10rem; background: color-mix(in srgb, #E6FF55 32%, transparent); opacity: 0.18;"></span>
                     </div>
                     <div class="portfolio-frame">
-                        <p class="portfolio-kicker">Links &amp; Contact</p>
-                        <h2 class="portfolio-title">Contact Endcap</h2>
-                        <p class="portfolio-copy">A few ways to reach me and a couple of places where my work lives.</p>
-                        <div class="portfolio-link-list">
+                        <p class="portfolio-kicker" data-scroll-reveal="soft-right">Links &amp; Notes</p>
+                        <h2 class="portfolio-title" data-scroll-reveal="left">Contact Endcap</h2>
+                        <p class="portfolio-copy" data-scroll-reveal="up">A few ways to reach me. The source for this page is also on GitHub.</p>
+                        <div class="portfolio-link-list" data-scroll-reveal="down">
                             <a class="portfolio-link-item" href="mailto:azizulazree@gmail.com">
                                 <p class="portfolio-link-label">Email</p>
                                 <p class="portfolio-link-value">azizulazree@gmail.com</p>
@@ -1256,6 +1636,29 @@
                         : 'rgba(10, 10, 10, 0.22)';
                 };
 
+                const updateRevealElements = (activeSection) => {
+                    document.querySelectorAll('[data-scroll-reveal]').forEach((element) => {
+                        const parentSection = element.closest('.portfolio-section');
+                        const isInActiveSection = parentSection === activeSection;
+
+                        if (! isInActiveSection) {
+                            element.classList.remove('is-visible');
+                            element.style.removeProperty('--reveal-delay');
+                            return;
+                        }
+
+                        const peers = Array.from(activeSection.querySelectorAll('[data-scroll-reveal]'));
+                        const index = peers.indexOf(element);
+                        const delay = Math.min(index * 90, 360);
+
+                        element.style.setProperty('--reveal-delay', `${delay}ms`);
+
+                        window.requestAnimationFrame(() => {
+                            element.classList.add('is-visible');
+                        });
+                    });
+                };
+
                 const setActiveSection = (nextIndex) => {
                     sections.forEach((section, index) => {
                         section.classList.toggle('is-active', index === nextIndex);
@@ -1267,6 +1670,7 @@
 
                     activeIndex = nextIndex;
                     setPaletteTag(sections[nextIndex]);
+                    updateRevealElements(sections[nextIndex]);
                 };
 
                 const updateContactParallax = () => {
@@ -1326,6 +1730,50 @@
                     releaseAnimationLock();
                 };
 
+                const scrollActiveDiagonal = (direction, amount = 140) => {
+                    const activeSection = sections[activeIndex];
+                    const diagonal = activeSection?.querySelector('[data-diagonal-scroll]');
+
+                    if (! diagonal || direction === 0) {
+                        return false;
+                    }
+
+                    const maxScroll = diagonal.scrollHeight - diagonal.clientHeight;
+
+                    if (maxScroll <= 0) {
+                        return false;
+                    }
+
+                    const canScrollDown = diagonal.scrollTop < maxScroll - 1;
+                    const canScrollUp = diagonal.scrollTop > 1;
+
+                    if (direction > 0 && canScrollDown) {
+                        const currentTarget = Number(diagonal.dataset.targetScroll || diagonal.scrollTop);
+                        const nextTarget = Math.min(maxScroll, currentTarget + amount);
+
+                        diagonal.dataset.targetScroll = String(nextTarget);
+                        diagonal.scrollTo({
+                            top: nextTarget,
+                            behavior: prefersReducedMotion ? 'auto' : 'smooth',
+                        });
+                        return true;
+                    }
+
+                    if (direction < 0 && canScrollUp) {
+                        const currentTarget = Number(diagonal.dataset.targetScroll || diagonal.scrollTop);
+                        const nextTarget = Math.max(0, currentTarget - amount);
+
+                        diagonal.dataset.targetScroll = String(nextTarget);
+                        diagonal.scrollTo({
+                            top: nextTarget,
+                            behavior: prefersReducedMotion ? 'auto' : 'smooth',
+                        });
+                        return true;
+                    }
+
+                    return false;
+                };
+
                 const handleDirectionalScroll = (direction) => {
                     if (direction === 0) {
                         return false;
@@ -1346,6 +1794,11 @@
                         return;
                     }
 
+                    if (scrollActiveDiagonal(event.deltaY > 0 ? 1 : -1, Math.abs(event.deltaY))) {
+                        event.preventDefault();
+                        return;
+                    }
+
                     const handled = handleDirectionalScroll(event.deltaY > 0 ? 1 : -1);
 
                     if (handled) {
@@ -1355,6 +1808,11 @@
 
                 window.addEventListener('keydown', (event) => {
                     if (['ArrowDown', 'PageDown', ' '].includes(event.key)) {
+                        if (scrollActiveDiagonal(1, window.innerHeight * 0.38)) {
+                            event.preventDefault();
+                            return;
+                        }
+
                         const handled = handleDirectionalScroll(1);
 
                         if (handled) {
@@ -1363,6 +1821,11 @@
                     }
 
                     if (['ArrowUp', 'PageUp'].includes(event.key)) {
+                        if (scrollActiveDiagonal(-1, window.innerHeight * 0.38)) {
+                            event.preventDefault();
+                            return;
+                        }
+
                         const handled = handleDirectionalScroll(-1);
 
                         if (handled) {
@@ -1395,6 +1858,10 @@
                     touchStartY = null;
 
                     if (Math.abs(deltaY) < 40) {
+                        return;
+                    }
+
+                    if (scrollActiveDiagonal(deltaY > 0 ? 1 : -1, Math.abs(deltaY) * 1.25)) {
                         return;
                     }
 
@@ -1486,6 +1953,13 @@
                 sections.forEach((section) => observer.observe(section));
                 setActiveSection(0);
                 updateContactParallax();
+
+                document.querySelectorAll('[data-diagonal-scroll]').forEach((diagonal) => {
+                    diagonal.dataset.targetScroll = String(diagonal.scrollTop);
+                    diagonal.addEventListener('scroll', () => {
+                        diagonal.dataset.targetScroll = String(diagonal.scrollTop);
+                    }, { passive: true });
+                });
 
                 document.querySelectorAll('[data-carousel]').forEach((carouselRoot) => {
                     const track = carouselRoot.querySelector('[data-carousel-track]');

@@ -72,21 +72,36 @@
 
                                 <div class="mt-5 space-y-3 border-t border-slate-200 pt-5">
                                     <div class="flex items-center justify-between gap-3">
-                                        <span class="text-sm text-slate-500">{{ __('Current Month Salary') }}</span>
-                                        <span class="text-base font-semibold text-[#5A8DEE]" x-text="currency(currentSalary)"></span>
+                                        <span class="text-sm text-slate-500">{{ __('Salary This Month') }}</span>
+                                        <span class="text-base font-semibold text-[#5A8DEE]" x-text="currency(selectedMonthSalary)"></span>
                                     </div>
                                     <div class="flex items-center justify-between gap-3">
-                                        <span class="text-sm text-slate-500">{{ __('Current Month Commitment') }}</span>
-                                        <span class="text-sm font-semibold text-rose-500" x-text="currency(-currentCommittedSpending)"></span>
+                                        <span class="text-sm text-slate-500">{{ __('Planned Bills') }}</span>
+                                        <span class="text-sm font-semibold text-rose-500" x-text="currency(-selectedMonthCommitmentTotal)"></span>
                                     </div>
                                     <div class="flex items-center justify-between gap-3">
-                                        <span class="text-sm text-slate-500">{{ __('Salary Balance Left After Bills') }}</span>
-                                        <span class="text-sm font-semibold" :class="plannedRemaining >= 0 ? 'text-emerald-600' : 'text-rose-600'" x-text="currency(plannedRemaining)"></span>
+                                        <span class="text-sm text-slate-500">{{ __('Balance After Bills') }}</span>
+                                        <span class="text-sm font-semibold" :class="selectedMonthBalanceAfterBills >= 0 ? 'text-emerald-600' : 'text-rose-600'" x-text="currency(selectedMonthBalanceAfterBills)"></span>
                                     </div>
                                     <div class="flex items-center justify-between gap-3">
                                         <span class="text-sm text-slate-500">{{ __('Balance Before Salary') }}</span>
-                                        <span class="text-sm font-semibold text-slate-900" x-text="currency(carryBalance)"></span>
+                                        <span class="text-sm font-semibold text-slate-900" x-text="currency(selectedMonthCarryBalance)"></span>
                                     </div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{{ __('Month') }}</p>
+                                <div class="mt-4 space-y-3">
+                                    <select
+                                        x-model="selectedMonthId"
+                                        class="w-full rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-400 focus:ring-slate-400"
+                                    >
+                                        <template x-for="month in monthStatuses" :key="month.id">
+                                            <option :value="month.id" x-text="month.label"></option>
+                                        </template>
+                                    </select>
+                                    <p class="text-sm text-slate-500" x-text="selectedMonth.salary_date || 'No salary date saved yet'"></p>
                                 </div>
                             </div>
                         </aside>
@@ -96,7 +111,7 @@
                                 <div class="flex items-center justify-between gap-4">
                                     <div>
                                         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#87A1CC]">{{ __('Chart') }}</p>
-                                        <h4 class="mt-2 text-xl font-semibold text-slate-950">{{ __('Income, bills, and balance') }}</h4>
+                                        <h4 class="mt-2 text-xl font-semibold text-slate-950">{{ __('Cash flow') }}</h4>
                                     </div>
 
                                     <div class="flex flex-wrap items-center gap-4 text-sm font-medium text-slate-500">
@@ -110,70 +125,101 @@
                                         </span>
                                         <span class="inline-flex items-center gap-2">
                                             <span class="h-3 w-3 rounded-full bg-[#FF4F70]"></span>
-                                            {{ __('Spending') }}
+                                            {{ __('Bills Paid') }}
                                         </span>
                                     </div>
                                 </div>
 
-                                <div class="mt-8">
-                                    <div class="grid grid-cols-[4.25rem_minmax(0,1fr)] gap-4">
-                                        <div class="flex h-[19rem] flex-col justify-between pb-10 text-sm font-medium text-[#8AA0C8]">
-                                            <template x-for="mark in combinedAxisMarks" :key="mark">
+                                <div class="mt-6 rounded-[1.75rem] border border-slate-100 bg-white/90 p-4">
+                                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                        <p class="text-sm text-slate-500" x-text="activePreset.range"></p>
+                                        <p class="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{{ __('Monthly view') }}</p>
+                                    </div>
+
+                                    <div class="mt-4 grid grid-cols-[4.25rem_minmax(0,1fr)] gap-4">
+                                        <div class="flex h-[18rem] flex-col justify-between text-sm font-medium text-[#8AA0C8]">
+                                            <template x-for="mark in chartAxisMarks" :key="'axis-' + mark">
                                                 <span x-text="currency(mark)"></span>
                                             </template>
                                         </div>
 
                                         <div>
-                                            <div class="relative h-[19rem] overflow-hidden rounded-[1.5rem] border border-slate-100 bg-white px-4 pt-6">
-                                                <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(138,160,200,0.16)_1px,transparent_1px)] bg-[length:100%_25%]"></div>
+                                            <div class="relative h-[18rem] overflow-hidden rounded-[1.5rem] border border-slate-100 bg-white">
+                                                <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(148,163,184,0.16)_1px,transparent_1px)] bg-[length:100%_25%]"></div>
+                                                <div class="pointer-events-none absolute inset-x-0 border-t border-dashed border-slate-300/70" :style="`top:${chartZeroYPct}%`"></div>
 
-                                                <svg viewBox="0 0 960 288" class="absolute inset-0 z-10 h-full w-full">
-                                                    <defs>
-                                                        <linearGradient id="finance-balance-fill" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="0%" stop-color="#2FD39B" stop-opacity="0.18"></stop>
-                                                            <stop offset="100%" stop-color="#2FD39B" stop-opacity="0.02"></stop>
-                                                        </linearGradient>
-                                                    </defs>
-
-                                                    <path :d="balanceAreaPath" fill="url(#finance-balance-fill)"></path>
-                                                </svg>
-
-                                                <div class="absolute inset-x-9 bottom-7 top-[1.125rem] z-20 grid items-end gap-5" :style="`grid-template-columns: repeat(${activePreset.labels.length}, minmax(0, 1fr))`">
-                                                    <template x-for="bar in combinedBarGroups" :key="'combined-html-bar-' + bar.label">
-                                                        <div class="flex h-full items-end justify-center gap-3">
-                                                            <div
-                                                                class="rounded-t-[1rem] shadow-[0_14px_28px_rgba(90,141,238,0.18)]"
-                                                                :style="`width:${bar.barWidthPx}px; height:${bar.incomeHeightPx}px; background: rgba(90,141,238,0.9); border: 1px solid rgba(90,141,238,0.2);`"
-                                                            ></div>
-                                                            <div
-                                                                class="rounded-t-[1rem] shadow-[0_14px_28px_rgba(255,79,112,0.16)]"
-                                                                :style="`width:${bar.barWidthPx}px; height:${bar.spendingHeightPx}px; background: rgba(255,79,112,0.86); border: 1px solid rgba(255,79,112,0.2);`"
-                                                            ></div>
-                                                        </div>
-                                                    </template>
-                                                </div>
-
-                                                <svg viewBox="0 0 960 288" class="relative z-30 h-full w-full">
-
+                                                <svg viewBox="0 0 960 300" class="pointer-events-none absolute inset-0 h-full w-full">
                                                     <path
-                                                        :d="balanceSplinePath"
+                                                        :d="endingBalanceLinePath"
                                                         fill="none"
                                                         stroke="#2FD39B"
-                                                        stroke-width="5"
+                                                        stroke-width="4"
                                                         stroke-linecap="round"
                                                         stroke-linejoin="round"
                                                     ></path>
 
-                                                    <template x-for="point in balancePoints" :key="'balance-' + point.label">
-                                                        <g>
-                                                            <circle :cx="point.x" :cy="point.y" r="6" fill="white" stroke="#2FD39B" stroke-width="4"></circle>
-                                                        </g>
+                                                    <template x-for="point in salaryPeakPoints" :key="'peak-dot-' + point.label">
+                                                        <circle
+                                                            :cx="point.x"
+                                                            :cy="point.y"
+                                                            r="5"
+                                                            fill="white"
+                                                            stroke="#2FD39B"
+                                                            stroke-width="3"
+                                                            opacity="0.92"
+                                                        ></circle>
                                                     </template>
                                                 </svg>
+
+                                                <template x-for="column in chartColumns" :key="'income-bar-' + column.label">
+                                                    <div
+                                                        class="pointer-events-none absolute z-10 rounded-t-xl bg-[#5A8DEE]/90 shadow-[0_10px_24px_rgba(90,141,238,0.18)]"
+                                                        :style="`left:${column.incomeLeftPct}%; top:${column.incomeTopPct}%; width:${column.barWidthPct}%; height:${column.incomeHeightPct}%;`"
+                                                    ></div>
+                                                </template>
+
+                                                <template x-for="column in chartColumns" :key="'income-label-' + column.label">
+                                                    <div
+                                                        class="pointer-events-none absolute z-20 -translate-x-1/2 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#5A8DEE] shadow-sm ring-1 ring-slate-200"
+                                                        :style="`left:${column.incomeCenterPct}%; top:${column.incomeLabelTopPct}%;`"
+                                                        x-text="compactCurrency(column.incomeValue)"
+                                                    ></div>
+                                                </template>
+
+                                                <template x-for="column in chartColumns" :key="'spending-bar-' + column.label">
+                                                    <div
+                                                        class="pointer-events-none absolute z-10 rounded-t-xl bg-[#FF4F70]/90 shadow-[0_10px_24px_rgba(255,79,112,0.16)]"
+                                                        :style="`left:${column.spendingLeftPct}%; top:${column.spendingTopPct}%; width:${column.barWidthPct}%; height:${column.spendingHeightPct}%;`"
+                                                    ></div>
+                                                </template>
+
+                                                <template x-for="column in chartColumns" :key="'spending-label-' + column.label">
+                                                    <div
+                                                        class="pointer-events-none absolute z-20 -translate-x-1/2 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#FF4F70] shadow-sm ring-1 ring-slate-200"
+                                                        :style="`left:${column.spendingCenterPct}%; top:${column.spendingLabelTopPct}%;`"
+                                                        x-text="compactCurrency(-column.spendingValue)"
+                                                    ></div>
+                                                </template>
+
+                                                <template x-for="point in endingBalancePoints" :key="'dot-' + point.label">
+                                                    <div
+                                                        class="pointer-events-none absolute z-20 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-emerald-400 bg-white"
+                                                        :style="`left:${point.xPct}%; top:${point.yPct}%;`"
+                                                    ></div>
+                                                </template>
+
+                                                <template x-for="point in endingBalancePoints" :key="'point-label-' + point.label">
+                                                    <div
+                                                        class="pointer-events-none absolute z-20 -translate-x-1/2 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold shadow-sm ring-1 ring-emerald-200"
+                                                        :class="point.endingBalance >= 0 ? 'text-emerald-700' : 'text-rose-600 ring-rose-200 bg-rose-50'"
+                                                        :style="`left:${point.xPct}%; top:${point.labelTopPct}%;`"
+                                                        x-text="compactCurrency(point.endingBalance)"
+                                                    ></div>
+                                                </template>
                                             </div>
 
-                                            <div class="mt-5 grid gap-2 text-center text-sm font-semibold text-[#8AA0C8]" :style="`grid-template-columns: repeat(${activePreset.labels.length}, minmax(0, 1fr))`">
-                                                <template x-for="label in activePreset.labels" :key="'balance-label-' + label">
+                                            <div class="mt-4 grid gap-2 text-center text-sm font-semibold text-[#8AA0C8]" :style="`grid-template-columns: repeat(${activePreset.labels.length}, minmax(0, 1fr))`">
+                                                <template x-for="label in activePreset.labels" :key="'month-' + label">
                                                     <span x-text="label"></span>
                                                 </template>
                                             </div>
@@ -195,14 +241,6 @@
                                 </div>
 
                                 <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap xl:justify-end">
-                                    <select
-                                        x-model="selectedMonthId"
-                                        class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm focus:border-slate-400 focus:ring-slate-400 sm:w-auto"
-                                    >
-                                        <template x-for="month in monthStatuses" :key="month.id">
-                                            <option :value="month.id" x-text="month.label"></option>
-                                        </template>
-                                    </select>
                                     <button
                                         type="button"
                                         class="inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto"
@@ -224,22 +262,22 @@
                                 <div class="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4">
                                     <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{{ __('Selected Month') }}</p>
                                     <p class="mt-2 text-lg font-semibold text-slate-950" x-text="selectedMonth.label"></p>
-                                    <p class="mt-1 text-sm text-slate-500" x-text="selectedMonth.salary_date"></p>
+                                    <p class="mt-1 text-sm text-slate-500" x-text="selectedMonth.salary_date || 'No salary date saved yet'"></p>
                                 </div>
                                 <div class="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{{ __('Paid So Far') }}</p>
+                                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{{ __('Bills Paid') }}</p>
                                     <p class="mt-2 text-lg font-semibold text-emerald-600" x-text="currency(-selectedMonthPaidTotal)"></p>
-                                    <p class="mt-1 text-sm text-slate-500" x-text="selectedMonthPaidCount + ' commitments paid'"></p>
+                                    <p class="mt-1 text-sm text-slate-500" x-text="selectedMonthPaidCount + ' bills paid'"></p>
                                 </div>
                                 <div class="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{{ __('Not Paid Yet') }}</p>
+                                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{{ __('Bills Not Paid Yet') }}</p>
                                     <p class="mt-2 text-lg font-semibold text-amber-600" x-text="currency(-selectedMonthUnpaidTotal)"></p>
-                                    <p class="mt-1 text-sm text-slate-500" x-text="selectedMonthUnpaidCount + ' commitments pending'"></p>
+                                    <p class="mt-1 text-sm text-slate-500" x-text="selectedMonthUnpaidCount + ' bills not paid yet'"></p>
                                 </div>
                                 <div class="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4">
                                     <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{{ __('Previous Month') }}</p>
-                                    <p class="mt-2 text-lg font-semibold text-slate-950" x-text="previousMonth ? previousMonth.label : 'None'"></p>
-                                    <p class="mt-1 text-sm text-slate-500" x-text="previousMonth ? currency(previousMonthPendingTotal) + ' pending comparison' : 'No previous month selected'"></p>
+                                    <p class="mt-2 text-lg font-semibold text-slate-950" x-text="previousMonth ? previousMonth.label : 'No previous month'"></p>
+                                    <p class="mt-1 text-sm text-slate-500" x-text="previousMonth ? currency(previousMonthPendingTotal) + ' not paid yet' : 'Nothing to compare yet'"></p>
                                 </div>
                             </div>
 
@@ -345,9 +383,9 @@
                                         <p class="mt-1 text-sm text-slate-500" x-text="previousMonth ? previousMonth.label : 'No earlier month yet'"></p>
                                     </div>
                                     <div class="rounded-2xl border border-slate-200 px-4 py-4">
-                                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{{ __('Total Spending Last Month') }}</p>
-                                        <p class="mt-2 text-2xl font-semibold text-slate-950" x-text="previousMonth ? currency(-previousMonthTotalSpending) : 'RM0'"></p>
-                                        <p class="mt-1 text-sm text-slate-500">{{ __('Salary balance minus end balance.') }}</p>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{{ __('Total Spending This Month') }}</p>
+                                        <p class="mt-2 text-2xl font-semibold text-slate-950" x-text="selectedMonthTotalSpending === null ? '' : currency(selectedMonthTotalSpending)"></p>
+                                        <p class="mt-1 text-sm text-slate-500" x-text="selectedMonthTotalSpending === null ? 'Waiting for salary to be recorded for this month.' : 'Balance after bills minus balance before salary.'"></p>
                                     </div>
                                 </div>
                             </div>
@@ -665,14 +703,33 @@
 
                     return this.monthStatuses[index + 1];
                 },
-                get currentSalary() {
-                    return this.activePreset.income[this.activePreset.income.length - 1] ?? 0;
+                get selectedMonthSalary() {
+                    return this.selectedMonth.salary ?? 0;
+                },
+                get selectedMonthCarryBalance() {
+                    return this.selectedMonth.carry_balance ?? 0;
+                },
+                get selectedMonthStartingBalance() {
+                    return this.selectedMonthCarryBalance + this.selectedMonthSalary;
+                },
+                get selectedMonthCommitmentTotal() {
+                    return this.selectedMonth.commitments.reduce((sum, item) => sum + item.amount, 0);
+                },
+                get selectedMonthBalanceAfterBills() {
+                    return this.selectedMonthStartingBalance - this.selectedMonthCommitmentTotal;
+                },
+                get selectedMonthTotalSpending() {
+                    if ((this.selectedMonth.salary ?? 0) <= 0) {
+                        return null;
+                    }
+
+                    return this.selectedMonthBalanceAfterBills - this.selectedMonthCarryBalance;
                 },
                 get carryBalance() {
                     return this.activePreset.carry?.[this.activePreset.carry.length - 1] ?? 0;
                 },
                 get currentBalance() {
-                    return this.activePreset.balance[this.activePreset.balance.length - 1] ?? 0;
+                    return this.activePreset.starting_balance?.[this.activePreset.starting_balance.length - 1] ?? 0;
                 },
                 get totalIncome() {
                     return this.activePreset.income.reduce((sum, value) => sum + value, 0);
@@ -714,27 +771,39 @@
                         ? this.previousMonth.commitments.filter((item) => item.status !== 'paid').reduce((sum, item) => sum + item.amount, 0)
                         : 0;
                 },
-                get previousMonthTotalSpending() {
-                    if (!this.previousMonth) {
-                        return 0;
-                    }
-
-                    const previousMonthStartingBalance = (this.previousMonth.salary ?? 0) + (this.previousMonth.carry_balance ?? 0);
-                    const previousMonthEndBalance = this.selectedMonth?.carry_balance ?? 0;
-
-                    return Math.max(0, previousMonthStartingBalance - previousMonthEndBalance);
-                },
                 get plannedRemaining() {
                     return this.currentBalance - this.currentCommittedSpending;
                 },
                 get netFlow() {
                     return this.plannedRemaining;
                 },
+                get chartDataPoints() {
+                    return this.activePreset.labels.map((label, index) => ({
+                        index,
+                        label,
+                        carry: this.activePreset.carry?.[index] ?? 0,
+                        income: this.activePreset.income?.[index] ?? 0,
+                        spending: this.activePreset.spending?.[index] ?? 0,
+                        startingBalance: this.activePreset.starting_balance?.[index] ?? 0,
+                        endingBalance: this.activePreset.ending_balance?.[index] ?? 0,
+                    }));
+                },
                 get summaryText() {
-                    const gap = this.plannedRemaining;
-                    const status = gap >= 0 ? 'should leave' : 'would go short by';
+                    const remaining = this.selectedMonthBalanceAfterBills;
 
-                    return `Carry-over before salary is ${this.currency(this.carryBalance)}. After adding this cycle salary of ${this.currency(this.currentSalary)}, current balance becomes ${this.currency(this.currentBalance)}. Planned commitments of ${this.currency(-this.currentCommittedSpending)} ${status} ${this.currency(Math.abs(gap))}.`;
+                    if (!this.selectedMonth.id) {
+                        return 'No month selected yet.';
+                    }
+
+                    if (this.selectedMonthCommitmentTotal === 0) {
+                        return `For ${this.selectedMonth.label}, you have ${this.currency(this.selectedMonthCarryBalance)} before salary and ${this.currency(this.selectedMonthSalary)} salary recorded. No bills have been added yet.`;
+                    }
+
+                    if (remaining >= 0) {
+                        return `For ${this.selectedMonth.label}, you start with ${this.currency(this.selectedMonthCarryBalance)}, add salary of ${this.currency(this.selectedMonthSalary)}, and should still have ${this.currency(remaining)} left after ${this.currency(-this.selectedMonthCommitmentTotal)} in bills.`;
+                    }
+
+                    return `For ${this.selectedMonth.label}, you start with ${this.currency(this.selectedMonthCarryBalance)}, add salary of ${this.currency(this.selectedMonthSalary)}, and your bills of ${this.currency(-this.selectedMonthCommitmentTotal)} are short by ${this.currency(Math.abs(remaining))}.`;
                 },
                 get groupedRecordShareBase() {
                     return this.groupedRecords
@@ -771,7 +840,7 @@
                 get bestPoint() {
                     const pairs = this.activePreset.labels.map((label, index) => ({
                         label,
-                        balance: this.activePreset.balance[index] ?? 0,
+                        balance: this.activePreset.ending_balance?.[index] ?? 0,
                     }));
 
                     return pairs.sort((a, b) => b.balance - a.balance)[0] ?? { label: '-', balance: 0 };
@@ -794,6 +863,14 @@
                 currency(value) {
                     const abs = Math.abs(value);
                     return `${value < 0 ? '-RM' : 'RM'}${abs.toLocaleString()}`;
+                },
+                compactCurrency(value) {
+                    const abs = Math.abs(value);
+                    const formatted = abs >= 1000
+                        ? `${(abs / 1000).toFixed(abs % 1000 === 0 ? 0 : 1)}k`
+                        : abs.toLocaleString();
+
+                    return `${value < 0 ? '-RM' : 'RM'}${formatted}`;
                 },
                 setRecordType(type) {
                     this.recordForm.type = type;
@@ -819,7 +896,7 @@
                 openCarryModal() {
                     this.carryModalOpen = true;
                     this.carryForm.date = this.todayDate;
-                    this.carryForm.value = this.carryBalance;
+                    this.carryForm.value = this.selectedMonthCarryBalance;
                 },
                 closeCarryModal() {
                     this.carryModalOpen = false;
@@ -919,21 +996,24 @@
                 },
                 applyChartImpact(type, amount) {
                     Object.values(this.chartPresets).forEach((preset) => {
-                        const lastIndex = preset.balance.length - 1;
+                        const lastIndex = preset.starting_balance.length - 1;
 
                         if (type === 'carry') {
                             preset.carry[lastIndex] = amount;
-                            preset.balance[lastIndex] = amount + (preset.income[lastIndex] ?? 0);
+                            preset.starting_balance[lastIndex] = amount + (preset.income[lastIndex] ?? 0);
+                            preset.ending_balance[lastIndex] = preset.starting_balance[lastIndex] - (preset.spending[lastIndex] ?? 0);
                             return;
                         }
 
                         if (type === 'income') {
                             preset.income[lastIndex] = (preset.income[lastIndex] ?? 0) + amount;
-                            preset.balance[lastIndex] = (preset.carry[lastIndex] ?? 0) + (preset.income[lastIndex] ?? 0);
+                            preset.starting_balance[lastIndex] = (preset.carry[lastIndex] ?? 0) + (preset.income[lastIndex] ?? 0);
+                            preset.ending_balance[lastIndex] = preset.starting_balance[lastIndex] - (preset.spending[lastIndex] ?? 0);
                             return;
                         }
 
                         preset.spending[lastIndex] = (preset.spending[lastIndex] ?? 0) + amount;
+                        preset.ending_balance[lastIndex] = (preset.starting_balance[lastIndex] ?? 0) - preset.spending[lastIndex];
                     });
                 },
                 findGroup(category) {
@@ -974,29 +1054,34 @@
                 chartMetrics() {
                     return {
                         width: 960,
-                        height: 288,
-                        left: 36,
-                        right: 924,
+                        height: 300,
+                        left: 44,
+                        right: 916,
                         top: 18,
-                        bottom: 260,
+                        bottom: 256,
                     };
                 },
-                buildBalancePoints() {
-                    const values = this.activePreset.balance;
+                chartY(value) {
                     const metrics = this.chartMetrics();
-                    const maxValue = this.combinedChartMax;
-                    const plotWidth = metrics.right - metrics.left;
+                    const range = this.chartDomainMax - this.chartDomainMin || 1;
                     const plotHeight = metrics.bottom - metrics.top;
-                    const stepX = values.length > 1 ? plotWidth / (values.length - 1) : plotWidth;
 
-                    return values.map((value, index) => ({
-                        label: this.activePreset.labels[index] ?? `Point ${index + 1}`,
-                        value,
-                        x: Number((metrics.left + (index * stepX)).toFixed(2)),
-                        y: Number((metrics.bottom - ((value / maxValue) * plotHeight)).toFixed(2)),
-                    }));
+                    return Number((metrics.bottom - (((value - this.chartDomainMin) / range) * plotHeight)).toFixed(2));
                 },
-                buildSplinePath(points) {
+                barRect(value, x, width) {
+                    const zeroY = this.chartZeroY;
+                    const valueY = this.chartY(value);
+                    const y = Math.min(zeroY, valueY);
+                    const height = Math.abs(zeroY - valueY);
+
+                    return {
+                        x: Number(x.toFixed(2)),
+                        y: Number(y.toFixed(2)),
+                        width: Number(width.toFixed(2)),
+                        height: Number(height.toFixed(2)),
+                    };
+                },
+                buildLinePath(points) {
                     if (!points.length) {
                         return '';
                     }
@@ -1010,67 +1095,175 @@
                     for (let i = 0; i < points.length - 1; i++) {
                         const current = points[i];
                         const next = points[i + 1];
-                        const controlX = (current.x + next.x) / 2;
-
+                        const controlX = Number(((current.x + next.x) / 2).toFixed(2));
                         path += ` C ${controlX} ${current.y}, ${controlX} ${next.y}, ${next.x} ${next.y}`;
                     }
 
                     return path;
                 },
-                buildAreaPath(points) {
-                    if (!points.length) {
-                        return '';
-                    }
+                get chartDomainMin() {
+                    const minValue = Math.min(0, ...this.chartDataPoints.map((point) => point.endingBalance));
+                    return Math.floor(minValue / 250) * 250;
+                },
+                get chartDomainMax() {
+                    const maxValue = Math.max(
+                        0,
+                        ...this.chartDataPoints.flatMap((point) => [
+                            point.income,
+                            point.spending,
+                            point.startingBalance,
+                            point.endingBalance,
+                        ]),
+                    );
 
-                    const baseline = this.chartMetrics().bottom;
-                    return `${this.buildSplinePath(points)} L ${points[points.length - 1].x} ${baseline} L ${points[0].x} ${baseline} Z`;
+                    return Math.max(250, Math.ceil(maxValue / 250) * 250);
                 },
-                get balancePoints() {
-                    return this.buildBalancePoints();
-                },
-                get balanceSplinePath() {
-                    return this.buildSplinePath(this.balancePoints);
-                },
-                get balanceAreaPath() {
-                    return this.buildAreaPath(this.balancePoints);
-                },
-                get balanceAxisMarks() {
-                    const ceiling = Math.max(...this.activePreset.balance);
-                    const rounded = Math.ceil(ceiling / 400) * 400;
+                get chartAxisMarks() {
+                    const steps = 4;
+                    const range = this.chartDomainMax - this.chartDomainMin;
 
-                    return [rounded, Math.round(rounded * 0.66), Math.round(rounded * 0.33), 0];
+                    return Array.from({ length: steps + 1 }, (_, index) => {
+                        const value = this.chartDomainMax - ((range / steps) * index);
+                        return Math.round(value);
+                    });
                 },
-                get combinedChartMax() {
-                    const ceiling = Math.max(...this.activePreset.balance, ...this.activePreset.income, ...this.activePreset.spending);
-                    return Math.ceil((ceiling * 1.15) / 250) * 250;
+                get chartGridLines() {
+                    return this.chartAxisMarks.map((value) => ({
+                        value,
+                        y: this.chartY(value),
+                    }));
                 },
-                get combinedAxisMarks() {
-                    const rounded = this.combinedChartMax;
-
-                    return [rounded, Math.round(rounded * 0.66), Math.round(rounded * 0.33), 0];
+                get chartZeroY() {
+                    return this.chartY(0);
                 },
-                get combinedBarGroups() {
+                get chartZeroYPct() {
+                    return Number(((this.chartZeroY / this.chartMetrics().height) * 100).toFixed(2));
+                },
+                get chartColumns() {
                     const metrics = this.chartMetrics();
-                    const plotHeight = metrics.bottom - metrics.top;
-                    const groupWidth = (metrics.right - metrics.left) / Math.max(this.activePreset.labels.length, 1);
-                    const barWidth = Math.max(18, Math.min(34, groupWidth * 0.24));
-                    const barMax = this.combinedChartMax || 1;
+                    const plotWidth = metrics.right - metrics.left;
+                    const count = Math.max(this.chartDataPoints.length, 1);
+                    const columnWidth = plotWidth / count;
+                    const barWidth = Math.max(16, Math.min(26, columnWidth * 0.18));
+                    const gap = Math.max(10, Math.min(18, columnWidth * 0.1));
 
-                    return this.activePreset.labels.map((label, index) => {
-                        const income = this.activePreset.income[index] ?? 0;
-                        const spending = this.activePreset.spending[index] ?? 0;
-                        const incomeHeight = Math.max(16, (income / barMax) * plotHeight);
-                        const spendingHeight = Math.max(16, (spending / barMax) * plotHeight);
+                    return this.chartDataPoints.map((point, index) => {
+                        const centerX = metrics.left + (columnWidth * index) + (columnWidth / 2);
+                        const incomeRect = this.barRect(point.income, centerX - gap - barWidth, barWidth);
+                        const spendingRect = this.barRect(point.spending, centerX + gap, barWidth);
 
                         return {
-                            label,
-                            income,
-                            spending,
-                            barWidthPx: Number(barWidth.toFixed(2)),
-                            incomeHeightPx: Number(incomeHeight.toFixed(2)),
-                            spendingHeightPx: Number(spendingHeight.toFixed(2)),
+                            index,
+                            label: point.label,
+                            centerX: Number(centerX.toFixed(2)),
+                            centerXPct: Number(((centerX / metrics.width) * 100).toFixed(2)),
+                            columnWidth: Number(columnWidth.toFixed(2)),
+                            barWidthPct: Number(((barWidth / metrics.width) * 100).toFixed(2)),
+                            incomeValue: point.income,
+                            incomeX: incomeRect.x,
+                            incomeY: incomeRect.y,
+                            incomeHeight: incomeRect.height,
+                            incomeCenterPct: Number((((incomeRect.x + (barWidth / 2)) / metrics.width) * 100).toFixed(2)),
+                            incomeLeftPct: Number(((incomeRect.x / metrics.width) * 100).toFixed(2)),
+                            incomeTopPct: Number(((incomeRect.y / metrics.height) * 100).toFixed(2)),
+                            incomeHeightPct: Number(((incomeRect.height / metrics.height) * 100).toFixed(2)),
+                            incomeLabelTopPct: Number((((Math.max(10, incomeRect.y - 28)) / metrics.height) * 100).toFixed(2)),
+                            spendingValue: point.spending,
+                            spendingX: spendingRect.x,
+                            spendingY: spendingRect.y,
+                            spendingHeight: spendingRect.height,
+                            spendingCenterPct: Number((((spendingRect.x + (barWidth / 2)) / metrics.width) * 100).toFixed(2)),
+                            spendingLeftPct: Number(((spendingRect.x / metrics.width) * 100).toFixed(2)),
+                            spendingTopPct: Number(((spendingRect.y / metrics.height) * 100).toFixed(2)),
+                            spendingHeightPct: Number(((spendingRect.height / metrics.height) * 100).toFixed(2)),
+                            spendingLabelTopPct: Number((((Math.max(10, spendingRect.y - 28)) / metrics.height) * 100).toFixed(2)),
+                            carryX: Number((centerX - (columnWidth * 0.22)).toFixed(2)),
+                            peakX: Number((incomeRect.x + (barWidth / 2)).toFixed(2)),
+                            endingX: Number((centerX + (columnWidth * 0.18)).toFixed(2)),
                         };
                     });
+                },
+                get carryBalancePoints() {
+                    const metrics = this.chartMetrics();
+
+                    return this.chartDataPoints.map((point, index) => {
+                        const column = this.chartColumns[index];
+                        const y = this.chartY(point.carry);
+
+                        return {
+                            ...point,
+                            x: column?.carryX ?? 0,
+                            y,
+                            xPct: Number((((column?.carryX ?? 0) / metrics.width) * 100).toFixed(2)),
+                            yPct: Number(((y / metrics.height) * 100).toFixed(2)),
+                        };
+                    });
+                },
+                get salaryPeakPoints() {
+                    const metrics = this.chartMetrics();
+
+                    return this.chartDataPoints.map((point, index) => {
+                        const column = this.chartColumns[index];
+                        const y = this.chartY(point.startingBalance);
+
+                        return {
+                            ...point,
+                            x: column?.peakX ?? 0,
+                            y,
+                            xPct: Number((((column?.peakX ?? 0) / metrics.width) * 100).toFixed(2)),
+                            yPct: Number(((y / metrics.height) * 100).toFixed(2)),
+                        };
+                    });
+                },
+                get endingBalancePoints() {
+                    const metrics = this.chartMetrics();
+
+                    return this.chartDataPoints.map((point, index) => ({
+                        ...point,
+                        x: this.chartColumns[index]?.endingX ?? 0,
+                        y: this.chartY(point.endingBalance),
+                        xPct: Number((((this.chartColumns[index]?.endingX ?? 0) / metrics.width) * 100).toFixed(2)),
+                        yPct: Number(((this.chartY(point.endingBalance) / metrics.height) * 100).toFixed(2)),
+                        labelTopPct: Number((((Math.max(14, this.chartY(point.endingBalance) - (point.endingBalance >= 0 ? 34 : -10))) / metrics.height) * 100).toFixed(2)),
+                    }));
+                },
+                get balanceFlowPoints() {
+                    const points = [];
+
+                    this.chartDataPoints.forEach((point, index) => {
+                        const carry = this.carryBalancePoints[index];
+                        const peak = this.salaryPeakPoints[index];
+                        const ending = this.endingBalancePoints[index];
+
+                        if (carry) {
+                            points.push({
+                                label: `${point.label}-carry`,
+                                x: carry.x,
+                                y: carry.y,
+                            });
+                        }
+
+                        if (peak) {
+                            points.push({
+                                label: `${point.label}-peak`,
+                                x: peak.x,
+                                y: peak.y,
+                            });
+                        }
+
+                        if (ending) {
+                            points.push({
+                                label: `${point.label}-ending`,
+                                x: ending.x,
+                                y: ending.y,
+                            });
+                        }
+                    });
+
+                    return points;
+                },
+                get endingBalanceLinePath() {
+                    return this.buildLinePath(this.balanceFlowPoints);
                 },
             };
         }
