@@ -81,11 +81,11 @@
                                     </div>
                                     <div class="flex items-center justify-between gap-3">
                                         <span class="text-sm text-slate-500">{{ __('Balance After Bills') }}</span>
-                                        <span class="text-sm font-semibold" :class="selectedMonthBalanceAfterBills >= 0 ? 'text-emerald-600' : 'text-rose-600'" x-text="currency(selectedMonthBalanceAfterBills)"></span>
+                                        <span class="text-sm font-semibold" :class="selectedMonthBalanceAfterBills !== null && selectedMonthBalanceAfterBills >= 0 ? 'text-emerald-600' : 'text-rose-600'" x-text="selectedMonthBalanceAfterBills === null ? '' : currency(selectedMonthBalanceAfterBills)"></span>
                                     </div>
                                     <div class="flex items-center justify-between gap-3">
                                         <span class="text-sm text-slate-500">{{ __('Balance Before Salary') }}</span>
-                                        <span class="text-sm font-semibold text-slate-900" x-text="currency(selectedMonthCarryBalance)"></span>
+                                        <span class="text-sm font-semibold text-slate-900" x-text="selectedMonthCarryBalanceDisplay"></span>
                                     </div>
                                 </div>
                             </div>
@@ -691,6 +691,11 @@
                         label: '',
                         salary_date: '',
                         salary: 0,
+                        opening_balance: 0,
+                        balance_after_bills: null,
+                        has_salary: false,
+                        has_closing_balance: false,
+                        is_current_period: false,
                         carry_balance: 0,
                         commitments: [],
                     };
@@ -706,27 +711,40 @@
                 get selectedMonthSalary() {
                     return this.selectedMonth.salary ?? 0;
                 },
+                get selectedMonthOpeningBalance() {
+                    return this.selectedMonth.opening_balance ?? this.selectedMonthCarryBalance;
+                },
                 get selectedMonthCarryBalance() {
                     return this.selectedMonth.carry_balance ?? 0;
                 },
+                get selectedMonthCarryBalanceDisplay() {
+                    return this.selectedMonthNeedsClosingBalance ? 'TBA' : this.currency(this.selectedMonthCarryBalance);
+                },
+                get selectedMonthNeedsClosingBalance() {
+                    return this.selectedMonth.is_current_period && !this.selectedMonth.has_closing_balance;
+                },
                 get selectedMonthStartingBalance() {
-                    return this.selectedMonthCarryBalance + this.selectedMonthSalary;
+                    return this.selectedMonthOpeningBalance + this.selectedMonthSalary;
                 },
                 get selectedMonthCommitmentTotal() {
                     return this.selectedMonth.commitments.reduce((sum, item) => sum + item.amount, 0);
                 },
                 get selectedMonthBalanceAfterBills() {
-                    return this.selectedMonthStartingBalance - this.selectedMonthCommitmentTotal;
+                    if (!this.selectedMonth.has_salary) {
+                        return null;
+                    }
+
+                    return this.selectedMonth.balance_after_bills ?? (this.selectedMonthStartingBalance - this.selectedMonthCommitmentTotal);
                 },
                 get selectedMonthTotalSpending() {
-                    if ((this.selectedMonth.salary ?? 0) <= 0) {
+                    if (this.selectedMonthBalanceAfterBills === null || this.selectedMonthNeedsClosingBalance) {
                         return null;
                     }
 
                     return this.selectedMonthBalanceAfterBills - this.selectedMonthCarryBalance;
                 },
                 get carryBalance() {
-                    return this.activePreset.carry?.[this.activePreset.carry.length - 1] ?? 0;
+                    return this.activePreset.ending_balance?.[this.activePreset.ending_balance.length - 1] ?? 0;
                 },
                 get currentBalance() {
                     return this.activePreset.starting_balance?.[this.activePreset.starting_balance.length - 1] ?? 0;
@@ -781,10 +799,11 @@
                     return this.activePreset.labels.map((label, index) => ({
                         index,
                         label,
-                        carry: this.activePreset.carry?.[index] ?? 0,
+                        openingBalance: this.activePreset.opening_balance?.[index] ?? 0,
                         income: this.activePreset.income?.[index] ?? 0,
                         spending: this.activePreset.spending?.[index] ?? 0,
                         startingBalance: this.activePreset.starting_balance?.[index] ?? 0,
+                        balanceAfterBills: this.activePreset.balance_after_bills?.[index] ?? null,
                         endingBalance: this.activePreset.ending_balance?.[index] ?? 0,
                     }));
                 },
@@ -795,15 +814,27 @@
                         return 'No month selected yet.';
                     }
 
+                    if (!this.selectedMonth.has_salary) {
+                        return `For ${this.selectedMonth.label}, salary has not been recorded yet. You can list bills now, and the after-bills and total-spending figures will appear once salary is added.`;
+                    }
+
+                    if (this.selectedMonthNeedsClosingBalance) {
+                        return `For ${this.selectedMonth.label}, salary and bills are recorded, but the real balance before the next salary has not been updated yet. The closing balance and total spending will stay as TBA until you enter that value.`;
+                    }
+
                     if (this.selectedMonthCommitmentTotal === 0) {
-                        return `For ${this.selectedMonth.label}, you have ${this.currency(this.selectedMonthCarryBalance)} before salary and ${this.currency(this.selectedMonthSalary)} salary recorded. No bills have been added yet.`;
+                        return `For ${this.selectedMonth.label}, you started from ${this.currency(this.selectedMonthOpeningBalance)}, added salary of ${this.currency(this.selectedMonthSalary)}, and have not added any bills yet.`;
                     }
 
                     if (remaining >= 0) {
-                        return `For ${this.selectedMonth.label}, you start with ${this.currency(this.selectedMonthCarryBalance)}, add salary of ${this.currency(this.selectedMonthSalary)}, and should still have ${this.currency(remaining)} left after ${this.currency(-this.selectedMonthCommitmentTotal)} in bills.`;
+                        if (this.selectedMonthTotalSpending === null) {
+                            return `For ${this.selectedMonth.label}, you started from ${this.currency(this.selectedMonthOpeningBalance)}, added salary of ${this.currency(this.selectedMonthSalary)}, and should still have ${this.currency(remaining)} left after ${this.currency(-this.selectedMonthCommitmentTotal)} in bills.`;
+                        }
+
+                        return `For ${this.selectedMonth.label}, you started from ${this.currency(this.selectedMonthOpeningBalance)}, added salary of ${this.currency(this.selectedMonthSalary)}, should still have ${this.currency(remaining)} after ${this.currency(-this.selectedMonthCommitmentTotal)} in bills, and your real balance before the next salary is ${this.currency(this.selectedMonthCarryBalance)}.`;
                     }
 
-                    return `For ${this.selectedMonth.label}, you start with ${this.currency(this.selectedMonthCarryBalance)}, add salary of ${this.currency(this.selectedMonthSalary)}, and your bills of ${this.currency(-this.selectedMonthCommitmentTotal)} are short by ${this.currency(Math.abs(remaining))}.`;
+                    return `For ${this.selectedMonth.label}, you started from ${this.currency(this.selectedMonthOpeningBalance)}, added salary of ${this.currency(this.selectedMonthSalary)}, and your bills of ${this.currency(-this.selectedMonthCommitmentTotal)} leave you short by ${this.currency(Math.abs(remaining))} before other spending is considered.`;
                 },
                 get groupedRecordShareBase() {
                     return this.groupedRecords
@@ -896,7 +927,7 @@
                 openCarryModal() {
                     this.carryModalOpen = true;
                     this.carryForm.date = this.todayDate;
-                    this.carryForm.value = this.selectedMonthCarryBalance;
+                    this.carryForm.value = this.selectedMonthNeedsClosingBalance ? '' : this.selectedMonthCarryBalance;
                 },
                 closeCarryModal() {
                     this.carryModalOpen = false;
@@ -999,21 +1030,19 @@
                         const lastIndex = preset.starting_balance.length - 1;
 
                         if (type === 'carry') {
-                            preset.carry[lastIndex] = amount;
-                            preset.starting_balance[lastIndex] = amount + (preset.income[lastIndex] ?? 0);
-                            preset.ending_balance[lastIndex] = preset.starting_balance[lastIndex] - (preset.spending[lastIndex] ?? 0);
+                            preset.ending_balance[lastIndex] = amount;
                             return;
                         }
 
                         if (type === 'income') {
                             preset.income[lastIndex] = (preset.income[lastIndex] ?? 0) + amount;
-                            preset.starting_balance[lastIndex] = (preset.carry[lastIndex] ?? 0) + (preset.income[lastIndex] ?? 0);
-                            preset.ending_balance[lastIndex] = preset.starting_balance[lastIndex] - (preset.spending[lastIndex] ?? 0);
+                            preset.starting_balance[lastIndex] = (preset.opening_balance[lastIndex] ?? 0) + (preset.income[lastIndex] ?? 0);
+                            preset.balance_after_bills[lastIndex] = preset.starting_balance[lastIndex] - (preset.spending[lastIndex] ?? 0);
                             return;
                         }
 
                         preset.spending[lastIndex] = (preset.spending[lastIndex] ?? 0) + amount;
-                        preset.ending_balance[lastIndex] = (preset.starting_balance[lastIndex] ?? 0) - preset.spending[lastIndex];
+                        preset.balance_after_bills[lastIndex] = (preset.starting_balance[lastIndex] ?? 0) - preset.spending[lastIndex];
                     });
                 },
                 findGroup(category) {
@@ -1102,16 +1131,26 @@
                     return path;
                 },
                 get chartDomainMin() {
-                    const minValue = Math.min(0, ...this.chartDataPoints.map((point) => point.endingBalance));
+                    const minValue = Math.min(
+                        0,
+                        ...this.chartDataPoints.flatMap((point) => [
+                            point.openingBalance,
+                            point.startingBalance,
+                            point.balanceAfterBills ?? 0,
+                            point.endingBalance,
+                        ]),
+                    );
                     return Math.floor(minValue / 250) * 250;
                 },
                 get chartDomainMax() {
                     const maxValue = Math.max(
                         0,
                         ...this.chartDataPoints.flatMap((point) => [
+                            point.openingBalance,
                             point.income,
                             point.spending,
                             point.startingBalance,
+                            point.balanceAfterBills ?? 0,
                             point.endingBalance,
                         ]),
                     );
@@ -1177,9 +1216,10 @@
                             spendingTopPct: Number(((spendingRect.y / metrics.height) * 100).toFixed(2)),
                             spendingHeightPct: Number(((spendingRect.height / metrics.height) * 100).toFixed(2)),
                             spendingLabelTopPct: Number((((Math.max(10, spendingRect.y - 28)) / metrics.height) * 100).toFixed(2)),
-                            carryX: Number((centerX - (columnWidth * 0.22)).toFixed(2)),
+                            openingX: Number((centerX - (columnWidth * 0.28)).toFixed(2)),
                             peakX: Number((incomeRect.x + (barWidth / 2)).toFixed(2)),
-                            endingX: Number((centerX + (columnWidth * 0.18)).toFixed(2)),
+                            afterBillsX: Number((centerX + (columnWidth * 0.02)).toFixed(2)),
+                            endingX: Number((centerX + (columnWidth * 0.28)).toFixed(2)),
                         };
                     });
                 },
@@ -1188,13 +1228,13 @@
 
                     return this.chartDataPoints.map((point, index) => {
                         const column = this.chartColumns[index];
-                        const y = this.chartY(point.carry);
+                        const y = this.chartY(point.openingBalance);
 
                         return {
                             ...point,
-                            x: column?.carryX ?? 0,
+                            x: column?.openingX ?? 0,
                             y,
-                            xPct: Number((((column?.carryX ?? 0) / metrics.width) * 100).toFixed(2)),
+                            xPct: Number((((column?.openingX ?? 0) / metrics.width) * 100).toFixed(2)),
                             yPct: Number(((y / metrics.height) * 100).toFixed(2)),
                         };
                     });
@@ -1212,6 +1252,23 @@
                             y,
                             xPct: Number((((column?.peakX ?? 0) / metrics.width) * 100).toFixed(2)),
                             yPct: Number(((y / metrics.height) * 100).toFixed(2)),
+                        };
+                    });
+                },
+                get afterBillsBalancePoints() {
+                    const metrics = this.chartMetrics();
+
+                    return this.chartDataPoints.map((point, index) => {
+                        if (point.balanceAfterBills === null) {
+                            return null;
+                        }
+
+                        return {
+                            ...point,
+                            x: this.chartColumns[index]?.afterBillsX ?? 0,
+                            y: this.chartY(point.balanceAfterBills),
+                            xPct: Number((((this.chartColumns[index]?.afterBillsX ?? 0) / metrics.width) * 100).toFixed(2)),
+                            yPct: Number(((this.chartY(point.balanceAfterBills) / metrics.height) * 100).toFixed(2)),
                         };
                     });
                 },
@@ -1233,6 +1290,7 @@
                     this.chartDataPoints.forEach((point, index) => {
                         const carry = this.carryBalancePoints[index];
                         const peak = this.salaryPeakPoints[index];
+                        const afterBills = this.afterBillsBalancePoints[index];
                         const ending = this.endingBalancePoints[index];
 
                         if (carry) {
@@ -1243,11 +1301,19 @@
                             });
                         }
 
-                        if (peak) {
+                        if (peak && point.income > 0) {
                             points.push({
                                 label: `${point.label}-peak`,
                                 x: peak.x,
                                 y: peak.y,
+                            });
+                        }
+
+                        if (afterBills) {
+                            points.push({
+                                label: `${point.label}-after-bills`,
+                                x: afterBills.x,
+                                y: afterBills.y,
                             });
                         }
 

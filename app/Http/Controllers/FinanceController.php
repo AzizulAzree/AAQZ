@@ -227,10 +227,11 @@ class FinanceController extends Controller
             return [
                 'label' => $label,
                 'range' => 'No records yet',
-                'carry' => [0],
+                'opening_balance' => [0],
                 'starting_balance' => [0],
                 'income' => [0],
                 'spending' => [0],
+                'balance_after_bills' => [0],
                 'ending_balance' => [0],
                 'labels' => ['No data'],
             ];
@@ -243,10 +244,11 @@ class FinanceController extends Controller
         return [
             'label' => $label,
             'range' => $this->formatPeriodRange($first, $last),
-            'carry' => $snapshots->pluck('carry')->all(),
+            'opening_balance' => $snapshots->pluck('opening_balance')->all(),
             'starting_balance' => $snapshots->pluck('starting_balance')->all(),
             'income' => $snapshots->pluck('salary')->all(),
             'spending' => $snapshots->pluck('paid_spending')->all(),
+            'balance_after_bills' => $snapshots->pluck('balance_after_bills')->map(fn (?float $value) => $value ?? 0.0)->all(),
             'ending_balance' => $snapshots->pluck('ending_balance')->all(),
             'labels' => $periods
                 ->map(fn (FinancePeriod $period) => CarbonImmutable::create($period->period_year, $period->period_month, 1)->format('M y'))
@@ -338,6 +340,7 @@ class FinanceController extends Controller
 
     private function buildMonthStatuses(EloquentCollection $financePeriods, EloquentCollection $commitmentCategories): array
     {
+        $today = CarbonImmutable::today();
         $snapshots = $this->buildPeriodSnapshots(
             $financePeriods
                 ->sortBy(fn (FinancePeriod $period) => sprintf('%04d-%02d', $period->period_year, $period->period_month))
@@ -345,7 +348,7 @@ class FinanceController extends Controller
         )->keyBy('id');
 
         return $financePeriods
-            ->map(function (FinancePeriod $period) use ($commitmentCategories, $snapshots): array {
+            ->map(function (FinancePeriod $period) use ($commitmentCategories, $snapshots, $today): array {
                 $snapshot = $snapshots->get($period->id);
 
                 return [
@@ -353,8 +356,14 @@ class FinanceController extends Controller
                     'label' => $this->formatPeriodLabel($period),
                     'salary_date' => optional($period->salary_received_on)?->format('j M Y') ?? '',
                     'salary' => (float) $period->salary_amount,
-                    'carry_balance' => (float) ($snapshot['carry'] ?? $period->carry_balance_before_salary),
+                    'opening_balance' => (float) ($snapshot['opening_balance'] ?? 0),
+                    'carry_balance' => (float) ($snapshot['ending_balance'] ?? $period->carry_balance_before_salary),
+                    'balance_after_bills' => $snapshot['balance_after_bills'],
                     'ending_balance' => (float) ($snapshot['ending_balance'] ?? 0),
+                    'has_salary' => (bool) ($snapshot['has_salary'] ?? false),
+                    'has_closing_balance' => (bool) ($snapshot['has_closing_balance'] ?? false),
+                    'is_current_period' => (int) $period->period_year === (int) $today->format('Y')
+                        && (int) $period->period_month === (int) $today->format('n'),
                     'commitments' => $this->buildPeriodCommitments($period, $commitmentCategories)
                         ->sortBy([
                             fn (FinancePeriodCommitment $commitment) => $commitment->status !== 'paid',
@@ -379,31 +388,32 @@ class FinanceController extends Controller
 
     private function buildPeriodSnapshots(Collection $periods): Collection
     {
-        $previousEndingBalance = null;
+        $previousClosingBalance = null;
 
-        return $periods->map(function (FinancePeriod $period) use (&$previousEndingBalance): array {
-            $hasExplicitCarryRecord = $period->records->contains(
+        return $periods->map(function (FinancePeriod $period) use (&$previousClosingBalance): array {
+            $hasExplicitClosingBalance = $period->records->contains(
                 fn (FinanceRecord $record) => $record->record_type === 'carry_balance'
             );
-
-            $rawCarry = (float) $period->carry_balance_before_salary;
-            $effectiveCarry = $hasExplicitCarryRecord
-                ? $rawCarry
-                : (($rawCarry !== 0.0 || $previousEndingBalance === null) ? $rawCarry : $previousEndingBalance);
-
+            $closingBalance = (float) $period->carry_balance_before_salary;
+            $openingBalance = $previousClosingBalance ?? $closingBalance;
             $salary = (float) $period->salary_amount;
             $paidSpending = $this->sumPaidCommitments($period);
-            $startingBalance = $effectiveCarry + $salary;
-            $endingBalance = $startingBalance - $paidSpending;
+            $hasSalary = $salary > 0;
+            $startingBalance = $openingBalance + $salary;
+            $balanceAfterBills = $hasSalary ? $startingBalance - $paidSpending : null;
+            $endingBalance = $closingBalance;
 
-            $previousEndingBalance = $endingBalance;
+            $previousClosingBalance = $closingBalance;
 
             return [
                 'id' => $period->id,
-                'carry' => $effectiveCarry,
+                'opening_balance' => $openingBalance,
                 'salary' => $salary,
+                'has_salary' => $hasSalary,
+                'has_closing_balance' => $hasExplicitClosingBalance,
                 'paid_spending' => $paidSpending,
                 'starting_balance' => $startingBalance,
+                'balance_after_bills' => $balanceAfterBills,
                 'ending_balance' => $endingBalance,
             ];
         });
