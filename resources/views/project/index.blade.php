@@ -1,221 +1,140 @@
 <x-app-layout>
-    @php
-        $folderCounter = 0;
-
-        $renderTree = function (array $nodes, int $workspaceId, int $depth = 0) use (&$renderTree, &$folderCounter) {
-            foreach ($nodes as $node) {
-                if (($node['type'] ?? 'folder') === 'shortcut') {
-                    echo '<li class="project-tree-item" style="--project-depth: '.$depth.'">';
-                    echo '<a href="'.e($node['open_url']).'" class="project-shortcut" target="_blank" rel="noopener noreferrer">';
-                    echo '<span class="project-shortcut-icon" aria-hidden="true">&#8599;</span>';
-                    echo '<span class="project-shortcut-copy">';
-                    echo '<span class="project-shortcut-title">'.e($node['name']).'</span>';
-                    if (! empty($node['description'])) {
-                        echo '<span class="project-shortcut-description">'.e($node['description']).'</span>';
-                    }
-                    echo '</span>';
-                    echo '</a>';
-                    echo '</li>';
-                    continue;
-                }
-
-                $folderCounter++;
-                $folderId = 'project-folder-'.$folderCounter;
-                $children = $node['children'] ?? [];
-
-                echo '<li class="project-tree-item" style="--project-depth: '.$depth.'">';
-                echo '<section x-data="{ open: false, actionsOpen: false }" class="project-folder">';
-                echo '<div class="project-folder-head">';
-                echo '<div class="project-folder-left">';
-                echo '<button type="button" class="project-folder-toggle" x-on:click="open = ! open" x-bind:aria-expanded="open.toString()" aria-controls="'.$folderId.'">';
-                echo '<span class="project-folder-icon" aria-hidden="true" x-bind:class="open ? \'project-folder-icon-open\' : \'\'">&#8250;</span>';
-                echo '<span class="project-folder-title-wrap">';
-                echo '<span class="project-folder-title">'.e($node['name']).'</span>';
-                echo '<span class="project-folder-meta">'.count($children).' '.str(count($children) === 1 ? 'item' : 'items')->toString().'</span>';
-                echo '</span>';
-                echo '</button>';
-                echo '</div>';
-
-                echo '<div class="project-folder-actions" x-on:keydown.escape.window="actionsOpen = false">';
-                echo '<button type="button" class="project-folder-add" x-on:click="actionsOpen = ! actionsOpen" x-bind:aria-expanded="actionsOpen.toString()">';
-                echo '<span aria-hidden="true">+</span>';
-                echo '<span class="sr-only">'.e(__('Add inside folder')).'</span>';
-                echo '</button>';
-                echo '</div>';
-                echo '</div>';
-
-                echo '<div id="'.$folderId.'" x-show="open || actionsOpen" x-transition.opacity.duration.150ms class="project-folder-body">';
-                echo '<div class="project-folder-inline-menu" x-show="actionsOpen" x-transition.opacity.duration.150ms x-cloak>';
-                echo '<button type="button" class="project-folder-inline-action" x-on:click=\'actionsOpen = false; window.dispatchEvent(new CustomEvent("project-open-node-modal", { detail: { type: "folder", workspaceId: '.$workspaceId.', parentId: '.$node['id'].', parentName: '.json_encode($node['name'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT).' } }))\'>'.e(__('New folder')).'</button>';
-                echo '<button type="button" class="project-folder-inline-action" x-on:click=\'actionsOpen = false; window.dispatchEvent(new CustomEvent("project-open-node-modal", { detail: { type: "shortcut", workspaceId: '.$workspaceId.', parentId: '.$node['id'].', parentName: '.json_encode($node['name'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT).' } }))\'>'.e(__('New shortcut')).'</button>';
-                echo '</div>';
-                if (! empty($children)) {
-                    echo '<ul class="project-tree-list">';
-                    $renderTree($children, $workspaceId, $depth + 1);
-                    echo '</ul>';
-                } else {
-                    echo '<div class="project-folder-empty">'.e(__('No items yet. Add a folder or shortcut here.')).'</div>';
-                }
-                echo '</div>';
-
-                echo '</section>';
-                echo '</li>';
-            }
-        };
-    @endphp
-
-    <div
-        x-data="{
-            workspaceModalOpen: false,
-            nodeModalOpen: false,
-            nodeType: 'folder',
-            nodeWorkspaceId: '',
-            nodeParentId: '',
-            nodeParentName: '',
-            openWorkspaceModal() {
-                this.workspaceModalOpen = true;
-            },
-            openNodeModal(type, workspaceId, parentId = '', parentName = '') {
-                this.nodeType = type;
-                this.nodeWorkspaceId = workspaceId;
-                this.nodeParentId = parentId ?? '';
-                this.nodeParentName = parentName ?? '';
-                this.nodeModalOpen = true;
-            },
-        }"
-        x-init="
-            @if ($errors->has('name') && old('workspace_form') === '1')
-                workspaceModalOpen = true;
+    <div class="pr-page" x-data="projectBrowser(@js($workspaces), @js($recentShortcuts->values()))"
+        x-on:keydown.escape.window="closeModals()"
+        x-init="$nextTick(() => {
+            @if ($errors->any())
+                @if (old('workspace_form') === '1') openWorkspaceModal();
+                @else
+                    nodeType = @js(old('type', 'folder')); nodeWorkspaceId = @js(old('workspace_id', '')); nodeParentId = @js(old('parent_id', '')); nodeParentName = @js(old('parent_name', '')); nodeModalOpen = true;
+                @endif
             @endif
-            @if ($errors->has('workspace_id') || $errors->has('parent_id') || $errors->has('type') || $errors->has('url') || $errors->has('description'))
-                nodeModalOpen = true;
-                nodeType = @js(old('type', 'folder'));
-                nodeWorkspaceId = @js(old('workspace_id', ''));
-                nodeParentId = @js(old('parent_id', ''));
-                nodeParentName = @js(old('parent_name', ''));
-            @endif
-        "
-        x-on:project-open-workspace-modal.window="openWorkspaceModal()"
-        x-on:project-open-node-modal.window="openNodeModal($event.detail.type, $event.detail.workspaceId, $event.detail.parentId, $event.detail.parentName)"
-        class="py-12"
-    >
-        <div class="mx-auto max-w-6xl space-y-6 sm:px-6 lg:px-8">
-            <div class="project-page-layout">
-                <div class="space-y-6">
-                    <section class="bg-white shadow-sm sm:rounded-2xl">
-                        <div class="project-shell">
-                            <div class="project-shell-copy">
-                                <p class="project-shell-kicker">{{ __('Workspaces') }}</p>
-                                <h3 class="project-shell-title">{{ __('Everything stays organized without getting in your way.') }}</h3>
-                                <p class="project-shell-description">
-                                    {{ __('Create a workspace, group links inside folders, and keep quick access close to the work that matters.') }}
-                                </p>
-                            </div>
-
-                            <div class="project-shell-actions">
-                                <button type="button" class="project-primary-action" x-on:click="openWorkspaceModal()">
-                                    {{ __('+ Add workspace') }}
-                                </button>
-                                <div class="project-ghost-action">
-                                    {{ trans_choice('{1} :count workspace|[2,*] :count workspaces', count($workspaces), ['count' => count($workspaces)]) }}
-                                </div>
-                            </div>
+        })">
+        <header class="pr-page-header">
+            <div><p class="pr-eyebrow">YOUR WORK, IN ONE PLACE</p><h1>Projects</h1></div>
+        </header>
+        @if (session('status'))
+            <p class="pr-notice" role="status">{{ match(session('status')) { 'workspace-created' => 'Workspace created.', 'folder-created' => 'Folder created.', 'shortcut-created' => 'Link saved.', default => '' } }}</p>
+        @endif
+        <div class="pr-browser">
+            <aside class="pr-sidebar" aria-label="Workspaces">
+                <button type="button" class="pr-mobile-switch" :aria-expanded="mobileWorkspaceOpen" aria-controls="pr-workspace-panel" x-on:click="mobileWorkspaceOpen = !mobileWorkspaceOpen">
+                    <x-project-icon name="grid"/><span><small>Workspace</small><strong x-text="active?.name ?? 'Choose workspace'"></strong></span><x-project-icon name="chevron" class="pr-switch-chevron"/>
+                </button>
+                <div id="pr-workspace-panel" class="pr-workspace-panel" :class="{ 'is-open': mobileWorkspaceOpen }">
+                <div class="pr-sidebar-heading"><span>Workspaces</span><span class="pr-count" x-text="workspaces.length"></span></div>
+                <nav class="pr-workspace-list" aria-label="Choose workspace">
+                    <template x-for="workspace in workspaces" :key="workspace.id">
+                        <div class="pr-workspace-row" :class="{ 'is-active': activeId === workspace.id }">
+                        <button type="button" class="pr-workspace" :class="{ 'is-active': activeId === workspace.id }" :aria-current="activeId === workspace.id ? 'true' : null" x-on:click="navigate(workspace.id)">
+                            <x-project-icon name="grid"/><span x-text="workspace.name"></span><span class="pr-workspace-count" x-text="workspace.shortcut_count"></span>
+                        </button>
+                        <x-project-actions item="workspace" kind="workspace"/>
                         </div>
-
-                        <div class="border-t border-slate-200/80 bg-slate-50/70 px-5 py-5 sm:px-6">
-                            @if (session('status') === 'workspace-created')
-                                <p class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                                    {{ __('Workspace created.') }}
-                                </p>
-                            @elseif (session('status') === 'folder-created')
-                                <p class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                                    {{ __('Folder created.') }}
-                                </p>
-                            @elseif (session('status') === 'shortcut-created')
-                                <p class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                                    {{ __('Shortcut created.') }}
-                                </p>
-                            @endif
-
-                            @if (count($workspaces) === 0)
-                                <div class="project-empty-state">
-                                    <h3 class="project-empty-title">{{ __('No workspaces yet') }}</h3>
-                                    <p class="project-empty-copy">{{ __('Start by creating your first workspace, then add folders and shortcuts inside it.') }}</p>
-                                    <button type="button" class="project-primary-action" x-on:click="openWorkspaceModal()">
-                                        {{ __('Create workspace') }}
-                                    </button>
-                                </div>
-                            @else
-                                <div class="project-workspace-grid">
-                                    @foreach ($workspaces as $workspace)
-                                        <section x-data="{ open: false }" class="project-tree-board">
-                                            <div class="project-tree-toolbar">
-                                                <button type="button" class="project-workspace-toggle" x-on:click="open = ! open" x-bind:aria-expanded="open.toString()">
-                                                    <span class="project-workspace-toggle-copy">
-                                                        <span class="project-tree-label">{{ __('Workspace') }}</span>
-                                                        <span class="project-tree-name">{{ $workspace['name'] }}</span>
-                                                    </span>
-                                                    <span class="project-workspace-toggle-icon" x-bind:class="open ? 'project-workspace-toggle-icon-open' : ''" aria-hidden="true">&#8250;</span>
-                                                </button>
-                                                <div class="project-tree-toolbar-actions">
-                                                    <p class="project-tree-hint">
-                                                        {{ trans_choice('{1} :count folder|[2,*] :count folders', $workspace['folder_count'], ['count' => $workspace['folder_count']]) }}
-                                                    </p>
-                                                    <button
-                                                        type="button"
-                                                        class="project-circle-action"
-                                                        x-on:click="openNodeModal('folder', {{ $workspace['id'] }}, '', {{ \Illuminate\Support\Js::from($workspace['name']) }})"
-                                                    >
-                                                        <span aria-hidden="true">+</span>
-                                                        <span class="sr-only">{{ __('Add folder') }}</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div x-show="open" x-transition.opacity.duration.150ms>
-                                                @if (count($workspace['folders']) === 0)
-                                                    <div class="project-folder-empty mt-4">
-                                                        {{ __('No folders yet. Add a folder to start organizing your links.') }}
-                                                    </div>
-                                                @else
-                                                    <ul class="project-tree-list">
-                                                        {!! $renderTree($workspace['folders'], $workspace['id']) !!}
-                                                    </ul>
-                                                @endif
-                                            </div>
-                                        </section>
-                                    @endforeach
-                                </div>
-                            @endif
-                        </div>
-                    </section>
+                    </template>
+                </nav>
+                <button class="pr-workspace pr-workspace-add" type="button" x-on:click="openWorkspaceModal()"><x-project-icon name="plus"/><span>New workspace</span></button>
+                <div class="pr-sidebar-footer"><x-project-icon name="link"/><span>Your links, organized.</span></div>
                 </div>
-
-                <aside class="project-recent-wrap">
-                    <section class="project-recent-card">
-                        <div class="project-recent-head">
-                            <p class="project-tree-label">{{ __('Recently opened') }}</p>
+            </aside>
+            <main class="pr-content">
+                <div class="pr-welcome" x-show="!active">
+                    <span class="pr-empty-icon"><x-project-icon name="grid"/></span>
+                    <h2>A home for your project links</h2>
+                    <p>Keep documents, tools, and useful links together.</p>
+                    <button type="button" class="pr-button pr-button-dark" x-on:click="openWorkspaceModal()"><x-project-icon name="plus"/> Create workspace</button>
+                </div>
+                <section x-show="active" x-cloak>
+                    <div class="pr-content-header">
+                        <div class="pr-heading-copy"><p class="pr-eyebrow">WORKSPACE</p><h2 x-text="active?.name"></h2><p class="pr-muted" x-text="`${active?.folder_count ?? 0} folders · ${active?.shortcut_count ?? 0} links`"></p></div>
+                        <label class="pr-search"><x-project-icon name="search"/><input type="search" x-model="query" placeholder="Search this workspace" aria-label="Search this workspace"></label>
+                    </div>
+                    <div class="pr-toolbar">
+                        <div class="pr-mobile-path">
+                            <button type="button" x-show="folderId" x-on:click="navigate(activeId, parentFolder?.id ?? null)" :aria-label="'Back to ' + (parentFolder?.name ?? 'All folders')"><x-project-icon name="chevron"/><span>Back</span></button>
+                            <h2 x-text="folder?.name ?? 'All folders'"></h2>
                         </div>
-
-                        <div class="project-recent-list">
-                            @forelse ($recentShortcuts as $shortcut)
-                                <a href="{{ $shortcut['open_url'] }}" class="project-recent-link" target="_blank" rel="noopener noreferrer">
-                                    <span class="project-recent-link-title">{{ $shortcut['name'] }}</span>
-                                    <span class="project-recent-link-context">{{ $shortcut['context'] }}</span>
-                                </a>
-                            @empty
-                                <p class="project-recent-empty">{{ __('Open a shortcut and it will appear here.') }}</p>
-                            @endforelse
-                        </div>
-                    </section>
-                </aside>
-            </div>
+                        <nav class="pr-breadcrumbs" aria-label="Folder path">
+                            <button type="button" x-on:click="navigate(activeId)" :aria-current="!folderId ? 'page' : null">All folders</button>
+                            <template x-for="crumb in crumbs" :key="crumb.id"><span><x-project-icon name="chevron"/><button type="button" x-text="crumb.name" x-on:click="navigate(activeId, crumb.id)" :aria-current="folderId === crumb.id ? 'page' : null"></button></span></template>
+                        </nav>
+                        <div class="pr-actions"><button class="pr-button" type="button" x-on:click="openNodeModal('folder')"><x-project-icon name="folder"/> New folder</button><button class="pr-button pr-button-dark" type="button" x-show="folderId" x-on:click="openNodeModal('shortcut')"><x-project-icon name="plus"/> Add link</button></div>
+                    </div>
+                    <p class="pr-result-label" x-show="query.trim()" x-text="`${items.length} results in this workspace`" role="status"></p>
+                    <div class="pr-folder-grid" x-show="folders.length">
+                        <template x-for="item in folders" :key="item.id">
+                            <div class="pr-folder-card">
+                            <x-project-actions item="item" kind="folder"/>
+                            <button class="pr-folder-open" type="button" x-on:click="navigate(activeId, item.id)">
+                                <span class="pr-folder-symbol"><x-project-icon name="folder"/></span><x-project-icon name="chevron" class="pr-folder-chevron"/>
+                                <strong x-text="item.name"></strong><span class="pr-muted" x-text="`${item.children.length} ${item.children.length === 1 ? 'item' : 'items'}`"></span>
+                                <span class="pr-item-path" x-show="query.trim() && item.trail.length" x-text="item.trail.map(p => p.name).join(' / ')"></span>
+                            </button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="pr-link-list" x-show="links.length">
+                        <div class="pr-list-label">Links</div>
+                        <template x-for="item in links" :key="item.id">
+                            <div class="pr-link-wrapper">
+                            <a class="pr-link-row" :href="item.open_url" target="_blank" rel="noopener noreferrer">
+                                <span class="pr-link-symbol"><x-project-icon name="link"/></span>
+                                <span class="pr-link-copy">
+                                    <strong x-text="item.name"></strong>
+                                    <span class="pr-link-description" x-show="item.description" x-text="item.description"></span>
+                                    <span class="pr-link-url" x-text="item.url"></span>
+                                    <small x-show="query.trim()" x-text="item.trail.map(p => p.name).join(' / ')"></small>
+                                </span>
+                                <x-project-icon name="arrow"/>
+                            </a>
+                            <x-project-actions item="item" kind="link"/>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="pr-empty" x-show="!items.length">
+                        <span class="pr-empty-icon"><template x-if="query.trim()"><x-project-icon name="search"/></template><template x-if="!query.trim()"><x-project-icon name="folder"/></template></span>
+                        <h3 x-text="query.trim() ? 'No matches found' : folderId ? 'This folder is empty' : 'Your workspace is ready'"></h3>
+                        <p x-text="query.trim() ? 'Try another name or keyword.' : folderId ? 'Save your first link here.' : 'Add a folder for your project links.'"></p>
+                        <button type="button" class="pr-button pr-button-dark" x-show="!query.trim()" x-on:click="openNodeModal(folderId ? 'shortcut' : 'folder')"><x-project-icon name="plus"/><span x-text="folderId ? 'Add link' : 'New folder'"></span></button>
+                    </div>
+                </section>
+            </main>
         </div>
-
+        <section class="pr-recent" aria-label="Recently opened">
+            <div class="pr-section-title"><x-project-icon name="clock"/><h2>Recently opened</h2></div>
+            <div class="pr-recent-grid">
+                @forelse ($recentShortcuts as $shortcut)
+                <a class="pr-recent-item" href="{{ $shortcut['open_url'] }}" target="_blank" rel="noopener noreferrer"><span class="pr-link-symbol"><x-project-icon name="link"/></span><span><strong>{{ $shortcut['name'] }}</strong><small>{{ $shortcut['context'] }}</small></span><x-project-icon name="arrow"/></a>
+                @empty
+                <p class="pr-muted">Your recently opened links will appear here.</p>
+                @endforelse
+            </div>
+        </section>
+        <template x-if="manage">
+            <div class="pr-manage-overlay" x-on:click.self="closeModals()">
+                <section class="pr-manage-dialog" :role="manage.mode === 'delete' ? 'alertdialog' : 'dialog'" aria-modal="true" aria-labelledby="manage-title" aria-describedby="manage-warning" x-on:keydown="trapFocus($event)" :aria-busy="busy">
+                    <span class="pr-delete-symbol" x-show="manage.mode === 'delete'"><x-project-icon name="warning"/></span>
+                    <h2 id="manage-title" x-text="`${manage.mode === 'delete' ? 'Delete' : 'Edit'} ${manage.kind}`"></h2>
+                    <form x-on:submit.prevent="submitManage()">
+                        <template x-if="manage.mode === 'edit'">
+                            <div class="pr-manage-fields">
+                                <label for="manage-name">Name</label><input id="manage-name" x-model="manageName" required maxlength="255" :disabled="busy">
+                                <template x-if="manage.kind === 'link'"><div class="pr-manage-fields">
+                                    <label for="manage-url">Link URL</label><input id="manage-url" type="url" x-model="manageUrl" required maxlength="255" :disabled="busy">
+                                    <label for="manage-description">Description (optional)</label><textarea id="manage-description" x-model="manageDescription" rows="3" :disabled="busy"></textarea>
+                                </div></template>
+                            </div>
+                        </template>
+                        <div id="manage-warning" x-show="manage.mode === 'delete'" class="pr-delete-warning"><strong x-text="manage.item.name"></strong><p x-text="deleteWarning"></p><p class="pr-danger-text">This cannot be undone.</p></div>
+                        <p class="pr-manage-error" role="alert" x-show="manageError" x-text="manageError"></p>
+                        <div class="pr-manage-footer"><button id="manage-cancel" class="pr-button" type="button" x-on:click="closeModals()" :disabled="busy">Cancel</button><button class="pr-button" :class="manage.mode === 'delete' ? 'pr-button-danger' : 'pr-button-dark'" type="submit" :disabled="busy" x-text="busy ? 'Working…' : manage.mode === 'delete' ? `Delete ${manage.kind}` : 'Save changes'"></button></div>
+                    </form>
+                </section>
+            </div>
+        </template>
         <template x-if="workspaceModalOpen">
-            <div class="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div class="pr-create-overlay fixed inset-0 z-50 flex items-center justify-center px-4">
                 <div class="absolute inset-0 bg-slate-900/40" x-on:click="workspaceModalOpen = false"></div>
-                <div class="relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+                <div class="pr-dialog relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-label="Create item" x-on:keydown="trapFocus($event)">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-sm text-slate-500">{{ __('New workspace') }}</p>
@@ -236,7 +155,7 @@
 
                         <div class="flex items-center gap-3">
                             <x-primary-button>{{ __('Create workspace') }}</x-primary-button>
-                            <p class="text-xs text-slate-500">{{ __('You can add folders after the workspace is created.') }}</p>
+
                         </div>
                     </form>
                 </div>
@@ -244,13 +163,13 @@
         </template>
 
         <template x-if="nodeModalOpen">
-            <div class="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div class="pr-create-overlay fixed inset-0 z-50 flex items-center justify-center px-4">
                 <div class="absolute inset-0 bg-slate-900/40" x-on:click="nodeModalOpen = false"></div>
-                <div class="relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+                <div class="pr-dialog relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-label="Create item" x-on:keydown="trapFocus($event)">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-sm text-slate-500" x-text="nodeType === 'shortcut' ? '{{ __('New shortcut') }}' : '{{ __('New folder') }}'"></p>
-                            <h3 class="mt-1 text-lg font-semibold text-slate-900" x-text="nodeType === 'shortcut' ? '{{ __('Add shortcut') }}' : '{{ __('Add folder') }}'"></h3>
+                            <p class="text-sm text-slate-500" x-text="nodeType === 'shortcut' ? '{{ __('New link') }}' : '{{ __('New folder') }}'"></p>
+                            <h3 class="mt-1 text-lg font-semibold text-slate-900" x-text="nodeType === 'shortcut' ? '{{ __('Add link') }}' : '{{ __('Add folder') }}'"></h3>
                             <p class="mt-1 text-xs text-slate-500" x-show="nodeParentName">
                                 {{ __('Inside') }} <span x-text="nodeParentName"></span>
                             </p>
@@ -278,7 +197,7 @@
                         </div>
 
                         <div>
-                            <x-input-label for="node-description" :value="__('Description')" />
+                            <x-input-label for="node-description" :value="__('Description (optional)')" />
                             <textarea id="node-description" name="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500">{{ old('description') }}</textarea>
                             <x-input-error class="mt-2" :messages="$errors->get('description')" />
                         </div>
@@ -288,8 +207,8 @@
                         <x-input-error class="mt-2" :messages="$errors->get('type')" />
 
                         <div class="flex items-center gap-3">
-                            <button type="submit" class="inline-flex items-center rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700" x-text="nodeType === 'shortcut' ? '{{ __('Create shortcut') }}' : '{{ __('Create folder') }}'"></button>
-                            <p class="text-xs text-slate-500" x-show="nodeType === 'shortcut'">{{ __('Shortcuts can only be created inside folders.') }}</p>
+                            <button type="submit" class="inline-flex items-center rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700" x-text="nodeType === 'shortcut' ? '{{ __('Save link') }}' : '{{ __('Create folder') }}'"></button>
+
                         </div>
                     </form>
                 </div>

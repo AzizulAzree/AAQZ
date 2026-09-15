@@ -1,18 +1,18 @@
 <?php
 
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DatabaseInspectorController;
-use App\Http\Controllers\BppController;
 use App\Http\Controllers\BppAppendixRowController;
+use App\Http\Controllers\BppController;
 use App\Http\Controllers\BppPdfExportController;
 use App\Http\Controllers\BppPrintablePreviewController;
 use App\Http\Controllers\BppQuotationExtractionController;
 use App\Http\Controllers\BppSupplierQuoteController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DatabaseInspectorController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\FormController;
 use App\Http\Controllers\PortfolioController;
-use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\StickyNoteController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
@@ -31,7 +31,10 @@ Route::get('/azizulazree', [PortfolioController::class, 'show'])->name('portfoli
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/holidays', [DashboardController::class, 'holidays'])->name('dashboard.holidays');
     Route::post('/dashboard/entries', [DashboardController::class, 'store'])->name('dashboard.entries.store');
+    Route::patch('/dashboard/entries/{calendarEntry}', [DashboardController::class, 'update'])->name('dashboard.entries.update');
+    Route::delete('/dashboard/entries/{calendarEntry}', [DashboardController::class, 'destroy'])->name('dashboard.entries.destroy');
     Route::get('/bpp', [BppController::class, 'index'])->name('bpp.index');
     Route::post('/bpp', [BppController::class, 'store'])->name('bpp.store');
     Route::get('/bpp/{bpp}', [BppController::class, 'show'])->name('bpp.show');
@@ -66,6 +69,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/form', [FormController::class, 'store'])->name('forms.store');
     Route::post('/project/workspaces', [ProjectController::class, 'storeWorkspace'])->name('project.workspaces.store');
     Route::post('/project/nodes', [ProjectController::class, 'storeNode'])->name('project.nodes.store');
+    Route::patch('/project/workspaces/{workspace}', [ProjectController::class, 'updateWorkspace'])->name('project.workspaces.update');
+    Route::delete('/project/workspaces/{workspace}', [ProjectController::class, 'destroyWorkspace'])->name('project.workspaces.destroy');
+    Route::patch('/project/nodes/{workspaceNode}', [ProjectController::class, 'updateNode'])->name('project.nodes.update');
+    Route::delete('/project/nodes/{workspaceNode}', [ProjectController::class, 'destroyNode'])->name('project.nodes.destroy');
     Route::get('/project/shortcuts/{workspaceNode}', [ProjectController::class, 'openShortcut'])->name('project.shortcuts.open');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

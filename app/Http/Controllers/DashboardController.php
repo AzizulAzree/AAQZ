@@ -6,14 +6,23 @@ use App\Http\Requests\StoreCalendarEntryRequest;
 use App\Models\CalendarEntry;
 use App\Support\Calendar\CalendarEntryCollector;
 use App\Support\Calendar\CalendarMonth;
+use App\Support\Calendar\MalaysiaHolidays;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function holidays(Request $request, MalaysiaHolidays $holidays): JsonResponse
+    {
+        $data = $request->validate(['year' => ['required', 'integer', 'between:2000,2100']]);
+
+        return response()->json($holidays->forYear((int) $data['year']));
+    }
+
     public function index(Request $request, CalendarEntryCollector $entryCollector): View
     {
         $calendar = CalendarMonth::fromMonthString($request->string('month')->toString());
@@ -58,7 +67,7 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function store(StoreCalendarEntryRequest $request): RedirectResponse
+    public function store(StoreCalendarEntryRequest $request): RedirectResponse|JsonResponse
     {
         CalendarEntry::create([
             'entry_date' => $request->date('entry_date')->toDateString(),
@@ -70,11 +79,38 @@ class DashboardController extends Controller
             'source_id' => $request->user()->id,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json(['redirect' => route('dashboard', ['month' => $request->date('entry_date')->format('Y-m'), 'date' => $request->date('entry_date')->toDateString()])]);
+        }
+
         return redirect()
             ->route('dashboard', array_filter([
                 'month' => $request->string('month')->toString(),
             ]))
             ->with('status', 'calendar-entry-created');
+    }
+
+    public function update(Request $request, CalendarEntry $calendarEntry): JsonResponse
+    {
+        abort_unless($calendarEntry->source_type === 'self' && $calendarEntry->source_id === $request->user()->id, 403);
+        $data = $request->validate((new StoreCalendarEntryRequest)->rules());
+        unset($data['month']);
+        if (! $data['follow_up_enabled']) {
+            $data['follow_up_days'] = null;
+        }
+        $calendarEntry->update($data);
+
+        return response()->json(['redirect' => route('dashboard', ['month' => $calendarEntry->entry_date->format('Y-m'), 'date' => $calendarEntry->entry_date->toDateString()])]);
+    }
+
+    public function destroy(Request $request, CalendarEntry $calendarEntry): JsonResponse
+    {
+        abort_unless($calendarEntry->source_type === 'self' && $calendarEntry->source_id === $request->user()->id, 403);
+        $request->validate(['confirmed' => ['required', 'accepted']]);
+        $date = $calendarEntry->entry_date;
+        $calendarEntry->delete();
+
+        return response()->json(['redirect' => route('dashboard', ['month' => $date->format('Y-m'), 'date' => $date->toDateString()])]);
     }
 
     private function buildReminderDays(Collection $reminderDisplayDates, Collection $reminderEntries): array

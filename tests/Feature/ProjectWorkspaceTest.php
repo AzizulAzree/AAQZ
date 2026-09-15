@@ -41,7 +41,7 @@ class ProjectWorkspaceTest extends TestCase
                 'name' => 'Workspace One',
             ]);
 
-        $response->assertRedirect('/project');
+        $response->assertRedirect(route('project.index', ['workspace' => Workspace::query()->sole()->id]));
 
         $this->assertDatabaseHas('workspaces', [
             'user_id' => $user->id,
@@ -67,7 +67,7 @@ class ProjectWorkspaceTest extends TestCase
                 'name' => 'Planning',
             ]);
 
-        $response->assertRedirect('/project');
+        $response->assertRedirect(route('project.index', ['workspace' => $workspace->id]));
 
         $this->assertDatabaseHas('workspace_nodes', [
             'workspace_id' => $workspace->id,
@@ -130,7 +130,7 @@ class ProjectWorkspaceTest extends TestCase
                 'description' => 'Quarterly rollout checkpoints',
             ]);
 
-        $response->assertRedirect('/project');
+        $response->assertRedirect(route('project.index', ['workspace' => $workspace->id, 'folder' => $folder->id]));
 
         $this->assertDatabaseHas('workspace_nodes', [
             'workspace_id' => $workspace->id,

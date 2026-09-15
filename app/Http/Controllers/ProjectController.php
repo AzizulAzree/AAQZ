@@ -7,7 +7,9 @@ use App\Http\Requests\StoreWorkspaceRequest;
 use App\Models\RecentShortcut;
 use App\Models\Workspace;
 use App\Models\WorkspaceNode;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
@@ -23,6 +25,7 @@ class ProjectController extends Controller
             ->map(fn (Workspace $workspace) => [
                 'id' => $workspace->id,
                 'name' => $workspace->name,
+                'manage_url' => route('project.workspaces.update', $workspace),
                 'folders' => $this->buildTree($workspace->nodes),
                 'folder_count' => $workspace->nodes->where('type', 'folder')->count(),
                 'shortcut_count' => $workspace->nodes->where('type', 'shortcut')->count(),
@@ -47,13 +50,13 @@ class ProjectController extends Controller
 
     public function storeWorkspace(StoreWorkspaceRequest $request): RedirectResponse
     {
-        $request->user()->workspaces()->create([
+        $workspace = $request->user()->workspaces()->create([
             'name' => $request->string('name')->toString(),
             'sort_order' => (int) $request->user()->workspaces()->max('sort_order') + 1,
         ]);
 
         return redirect()
-            ->route('project.index')
+            ->route('project.index', ['workspace' => $workspace->id])
             ->with('status', 'workspace-created');
     }
 
@@ -77,7 +80,7 @@ class ProjectController extends Controller
         ]);
 
         return redirect()
-            ->route('project.index')
+            ->route('project.index', array_filter(['workspace' => $workspace->id, 'folder' => $parentId]))
             ->with('status', $request->string('type')->toString() === 'folder' ? 'folder-created' : 'shortcut-created');
     }
 
@@ -99,6 +102,48 @@ class ProjectController extends Controller
         return redirect()->away($workspaceNode->url);
     }
 
+    public function updateWorkspace(Request $request, Workspace $workspace): JsonResponse
+    {
+        abort_unless($workspace->user_id === $request->user()->id, 403);
+        $workspace->update($request->validate(['name' => ['required', 'string', 'max:255']]));
+
+        return response()->json(['redirect' => route('project.index', ['workspace' => $workspace->id])]);
+    }
+
+    public function destroyWorkspace(Request $request, Workspace $workspace): JsonResponse
+    {
+        abort_unless($workspace->user_id === $request->user()->id, 403);
+        $request->validate(['confirmed' => ['required', 'accepted']]);
+        $workspace->delete();
+
+        return response()->json(['redirect' => route('project.index')]);
+    }
+
+    public function updateNode(Request $request, WorkspaceNode $workspaceNode): JsonResponse
+    {
+        abort_unless($workspaceNode->workspace->user_id === $request->user()->id, 403);
+        $rules = ['name' => ['required', 'string', 'max:255']];
+        if ($workspaceNode->isShortcut()) {
+            $rules['url'] = ['required', 'url:http,https', 'max:255'];
+            $rules['description'] = ['nullable', 'string'];
+        }
+        $workspaceNode->update($request->validate($rules));
+
+        return response()->json(['redirect' => route('project.index', array_filter([
+            'workspace' => $workspaceNode->workspace_id, 'folder' => $workspaceNode->parent_id,
+        ]))]);
+    }
+
+    public function destroyNode(Request $request, WorkspaceNode $workspaceNode): JsonResponse
+    {
+        abort_unless($workspaceNode->workspace->user_id === $request->user()->id, 403);
+        $request->validate(['confirmed' => ['required', 'accepted']]);
+        $destination = array_filter(['workspace' => $workspaceNode->workspace_id, 'folder' => $workspaceNode->parent_id]);
+        $workspaceNode->delete();
+
+        return response()->json(['redirect' => route('project.index', $destination)]);
+    }
+
     private function buildTree(Collection $nodes, ?int $parentId = null): array
     {
         return $nodes
@@ -110,6 +155,8 @@ class ProjectController extends Controller
                         'id' => $node->id,
                         'type' => 'shortcut',
                         'name' => $node->name,
+                        'url' => $node->url,
+                        'manage_url' => route('project.nodes.update', $node),
                         'description' => $node->description,
                         'open_url' => route('project.shortcuts.open', $node),
                     ];
@@ -119,6 +166,7 @@ class ProjectController extends Controller
                     'id' => $node->id,
                     'type' => 'folder',
                     'name' => $node->name,
+                    'manage_url' => route('project.nodes.update', $node),
                     'children' => $this->buildTree($nodes, $node->id),
                 ];
             })

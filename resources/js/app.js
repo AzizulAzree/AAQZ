@@ -1,6 +1,11 @@
 import './bootstrap';
 
 import Alpine from 'alpinejs';
+import projectBrowser from './project-browser';
+import calendarDashboard from './calendar-dashboard';
+
+Alpine.data('projectBrowser', projectBrowser);
+Alpine.data('calendarDashboard', calendarDashboard);
 
 window.Alpine = Alpine;
 window.copyTextToClipboard = async (text) => {

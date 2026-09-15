@@ -1,553 +1,123 @@
 <x-app-layout>
-    <div class="py-12">
-        <div
-            x-data="{
-                selectedEntry: null,
-                selectedDay: null,
-                selectedDayEntries: [],
-                createEntryDate: @js(old('entry_date', $createEntryDate)),
-                createEntryLabel: @js(old('entry_date_label', $createEntryLabel)),
-                createFollowUpEnabled: @js($createFollowUpEnabled),
-                createFollowUpDays: @js($createFollowUpDays),
-                rgba(color, alpha) {
-                    if (! color || ! color.startsWith('#')) {
-                        return '';
-                    }
-
-                    const normalized = color.length === 4
-                        ? `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`
-                        : color;
-
-                    const hex = normalized.slice(1);
-
-                    if (hex.length !== 6) {
-                        return '';
-                    }
-
-                    const r = Number.parseInt(hex.slice(0, 2), 16);
-                    const g = Number.parseInt(hex.slice(2, 4), 16);
-                    const b = Number.parseInt(hex.slice(4, 6), 16);
-
-                    if ([r, g, b].some(Number.isNaN)) {
-                        return '';
-                    }
-
-                    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                },
-                showEntryModal(entry) {
-                    this.selectedDay = null;
-                    this.selectedDayEntries = [];
-                    this.selectedEntry = entry;
-                    $dispatch('open-modal', 'calendar-entry-details');
-                },
-                showDayModal(dayLabel, entries) {
-                    this.selectedEntry = null;
-                    this.selectedDay = dayLabel;
-                    this.selectedDayEntries = entries;
-                    $dispatch('open-modal', 'calendar-day-details');
-                },
-                showCreateModal(date, label) {
-                    this.createEntryDate = date;
-                    this.createEntryLabel = label;
-                    $dispatch('open-modal', 'calendar-entry-create');
-                },
-            }"
-            x-init="
-                @if ($errors->hasBag('default') && old('entry_date'))
-                    $dispatch('open-modal', 'calendar-entry-create');
-                @endif
-            "
-            class="max-w-7xl mx-auto space-y-6 sm:px-6 lg:px-8"
-        >
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="reminder-panel text-gray-900">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                            <div class="inline-flex items-center gap-2 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-500">
-                                <span class="h-2 w-2 rounded-full bg-rose-400"></span>
-                                {{ __('Reminder') }}
-                            </div>
-                            <h3 class="mt-3 text-base font-semibold text-gray-900">{{ __('The next few days at a glance') }}</h3>
-                            <p class="mt-1 text-xs text-gray-500">{{ __('Stay on top of what needs your attention today and over the next two days.') }}</p>
-                        </div>
-                        <div class="flex items-center gap-2 text-xs text-gray-400">
-                            <span class="rounded-full border border-gray-200 px-2.5 py-1">
-                                {{ trans_choice('{0} No plans yet|{1} :count reminder|[2,*] :count reminders', collect($reminderDays)->sum(fn ($day) => $day['entries']->count()), ['count' => collect($reminderDays)->sum(fn ($day) => $day['entries']->count())]) }}
+    @php
+        $entryData = fn ($entry) => [
+            'id' => $entry['id'], 'title' => $entry['title'], 'details' => $entry['details'],
+            'date' => $entry['date']->toDateString(), 'date_label' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
+            'original_date' => $entry['model']->entry_date->toDateString(),
+            'is_follow_up' => $entry['is_follow_up'], 'follow_up_enabled' => $entry['follow_up_enabled'], 'follow_up_days' => $entry['follow_up_days'],
+            'owner_name' => $entry['owner_name'] ?? 'Unassigned', 'owner_color' => $entry['owner_color'] ?? '#718578',
+            'can_manage' => $entry['source_type'] === 'self' && $entry['source_id'] === auth()->id(),
+            'manage_url' => route('dashboard.entries.update', $entry['model']),
+        ];
+        $days = collect($calendar->weeks)->flatten(1)->map(fn ($day) => [
+            'date' => $day['date']->toDateString(), 'label' => $day['date']->isoFormat('dddd, D MMMM'),
+            'number' => $day['date']->day, 'weekday' => $day['date']->isoFormat('ddd'),
+            'today' => $day['is_today'], 'current' => $day['is_current_month'],
+            'entries' => $day['is_current_month'] ? $day['entries']->map($entryData)->values()->all() : [],
+        ])->values();
+        $config = [
+            'days' => $days, 'today' => $calendar->today->toDateString(),
+            'initialDate' => $calendar->today->isSameMonth($calendar->month) ? $calendar->today->toDateString() : $calendar->month->toDateString(),
+            'baseUrl' => route('dashboard'), 'storeUrl' => route('dashboard.entries.store'),
+            'holidayUrl' => route('dashboard.holidays', ['year' => $calendar->month->year]), 'holidayStates' => config('calendar.states'),
+            'upcomingHolidayUrl' => $calendar->month->year !== $calendar->today->year ? route('dashboard.holidays', ['year' => $calendar->today->year]) : null,
+        ];
+    @endphp
+    <div class="cal-page" x-data="calendarDashboard(@js($config))" x-on:keydown.escape.window="close()">
+        <header class="cal-header">
+            <div><p class="cal-eyebrow">MAKE ROOM FOR WHAT MATTERS</p><h1>Calendar</h1></div>
+            <button type="button" class="pr-button pr-button-dark" x-on:click="open('create')"><x-project-icon name="plus"/> Add entry</button>
+        </header>
+        @if (session('status') === 'calendar-entry-created')<p class="pr-notice" role="status">Entry added to your calendar.</p>@endif
+        <div class="cal-layout">
+            <section class="cal-month-panel" :class="{ 'cal-show-month': view === 'month' }" aria-label="Calendar month">
+                <div class="cal-month-toolbar">
+                    <label class="cal-month-picker"><span class="sr-only">Choose month</span><input type="month" value="{{ $selectedMonthQuery }}" x-on:change="changeMonth($event.target.value)" aria-label="Choose month"></label>
+                    <div class="cal-month-actions"><a class="pr-button" href="{{ route('dashboard') }}">Today</a><a class="cal-arrow" aria-label="Previous month" href="{{ route('dashboard', ['month' => $calendar->previousMonthQuery()]) }}"><x-project-icon name="chevron" class="cal-arrow-back"/></a><a class="cal-arrow" aria-label="Next month" href="{{ route('dashboard', ['month' => $calendar->nextMonthQuery()]) }}"><x-project-icon name="chevron"/></a></div>
+                </div>
+                <div class="cal-holiday-controls"><label for="cal-holiday-region">Holidays</label><select id="cal-holiday-region" x-model="holidayRegion" x-on:change="changeHolidayRegion()"><option value="national">Nationwide</option>@foreach(config('calendar.states') as $code => $name)<option value="{{ $code }}">{{ $name }}</option>@endforeach</select><span class="cal-holiday-status" x-show="holidayStatus === 'unavailable'">Dates unavailable</span><span class="cal-holiday-status" x-show="holidayStatus === 'empty'">No published dates for this year</span><span class="cal-holiday-status" x-show="holidayStatus === 'stale'">Showing saved dates</span></div>
+                <h2 class="sr-only">{{ $calendar->heading() }}</h2>
+                <div class="cal-mobile-tabs" aria-label="Calendar view"><button type="button" :aria-pressed="view === 'agenda'" x-on:click="view = 'agenda'">Agenda</button><button type="button" :aria-pressed="view === 'month'" x-on:click="view = 'month'">Month</button></div>
+                <div class="cal-week-strip" aria-label="Select a day">
+                    <template x-for="day in week" :key="day.date"><button type="button" :class="{ 'is-selected': selectedDate === day.date, 'is-today': day.today }" :aria-label="day.label" :aria-pressed="selectedDate === day.date" x-on:click="day.current ? selectDay(day.date) : changeMonth(day.date.slice(0,7))"><span x-text="day.weekday"></span><strong x-text="day.number"></strong><i :class="{ 'has-entries': day.entries.length, 'has-holiday': holidaysFor(day.date).length }"></i></button></template>
+                </div>
+                <div class="cal-grid" data-calendar-grid role="group" aria-label="{{ $calendar->heading() }}">
+                    <div class="cal-weekdays">@foreach ($calendar->weekdayLabels as $label)<span>{{ $label }}</span>@endforeach</div>
+                    @foreach ($calendar->weeks as $weekIndex => $week)
+                    <div class="cal-week" data-calendar-week="{{ $weekIndex + 1 }}">
+                        @foreach ($week as $day)
+                        @php($date = $day['date']->toDateString())
+                        <button type="button" class="cal-day {{ $day['is_current_month'] ? '' : 'cal-day-outside' }} {{ $day['is_today'] ? 'cal-day-today' : '' }}" data-date="{{ $date }}" :class="{ 'cal-day-selected': selectedDate === '{{ $date }}' }" :aria-pressed="selectedDate === '{{ $date }}'" aria-label="{{ $day['date']->isoFormat('dddd, D MMMM YYYY') }}{{ $day['is_current_month'] ? ', '.$day['entries']->count().' entries' : '' }}" x-on:click="{{ $day['is_current_month'] ? "selectDay('$date')" : "changeMonth('".$day['date']->format('Y-m')."')" }}">
+                            <span class="cal-day-number">{{ $day['date']->day }}</span>
+                            @if ($day['is_current_month'])
+                            <span class="cal-day-events">
+                                @foreach ($day['entries']->take(2) as $entry)
+                                <span class="cal-event-preview"><i style="background-color: {{ $entry['owner_color'] ?? '#718578' }}"></i><span>{{ $entry['title'] }}</span>@if($entry['is_follow_up'])<span class="cal-follow-indicator" aria-label="Follow Up">↻</span>@endif</span>
+                                @endforeach
+                                @if ($day['entries']->count() > 2)<span class="cal-more">+{{ $day['entries']->count() - 2 }} more</span>@endif
                             </span>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 grid gap-3 lg:grid-cols-3">
-                        @foreach ($reminderDays as $reminderDay)
-                            <section class="reminder-day-card">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p
-                                            class="reminder-day-label"
-                                            data-kind="{{ $reminderDay['label_kind'] ?? 'default' }}"
-                                        >
-                                            {{ $reminderDay['label'] }}
-                                        </p>
-                                        <p class="reminder-day-date">{{ $reminderDay['date_display'] ?? $reminderDay['date']->isoFormat('ddd, D MMM') }}</p>
-                                    </div>
-                                    <span class="rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-gray-500 ring-1 ring-gray-200">
-                                        {{ trans_choice('{0} Open|{1} :count item|[2,*] :count items', $reminderDay['entries']->count(), ['count' => $reminderDay['entries']->count()]) }}
-                                    </span>
-                                </div>
-
-                                <div class="reminder-list">
-                                    @forelse ($reminderDay['entries']->take(4) as $entry)
-                                        <button
-                                            type="button"
-                                            x-on:click="showEntryModal(@js([
-                                                'id' => $entry['id'],
-                                                'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
-                                                'title' => $entry['title'],
-                                                'details' => $entry['details'],
-                                                'source_type' => $entry['source_type'],
-                                                'source_id' => $entry['source_id'],
-                                                'owner_name' => $entry['owner_name'],
-                                                'owner_color' => $entry['owner_color'],
-                                                'is_follow_up' => $entry['is_follow_up'],
-                                                'follow_up_enabled' => $entry['follow_up_enabled'],
-                                                'follow_up_days' => $entry['follow_up_days'],
-                                                'tag' => $entry['tag'],
-                                                'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
-                                                'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
-                                            ]))"
-                                            class="reminder-list-item"
-                                            title="{{ $entry['details'] ?: __('Open this entry to see more information.') }}"
-                                            x-bind:style="`--reminder-dot: {{ $entry['owner_color'] ?: '#94A3B8' }}; --reminder-dot-soft: ${rgba('{{ $entry['owner_color'] ?: '#94A3B8' }}', 0.22)};`"
-                                        >
-                                            <span class="reminder-list-dot"></span>
-                                            <span class="reminder-list-content">
-                                                <span class="reminder-list-title">
-                                                    {{ $entry['title'] }}
-                                                    @if ($entry['is_follow_up'])
-                                                        <span class="entry-tag">{{ __('Follow Up') }}</span>
-                                                    @endif
-                                                </span>
-                                                @if ($entry['details'])
-                                                    <span class="reminder-list-meta">
-                                                        <span class="truncate">{{ \Illuminate\Support\Str::limit($entry['details'], 48) }}</span>
-                                                    </span>
-                                                @endif
-                                            </span>
-                                        </button>
-                                    @empty
-                                        <div class="reminder-empty">
-                                            {{ $reminderDay['empty_message'] ?? __('Nothing lined up here yet.') }}
-                                        </div>
-                                    @endforelse
-
-                                    @if ($reminderDay['entries']->count() > 4)
-                                        <button
-                                            type="button"
-                                            x-on:click="showDayModal(
-                                                @js($reminderDay['modal_label'] ?? $reminderDay['date']->isoFormat('dddd, D MMMM YYYY')),
-                                                @js(
-                                                    $reminderDay['entries']->map(fn ($entry) => [
-                                                        'id' => $entry['id'],
-                                                        'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
-                                                        'title' => $entry['title'],
-                                                        'details' => $entry['details'],
-                                                        'source_type' => $entry['source_type'],
-                                                        'source_id' => $entry['source_id'],
-                                                        'owner_name' => $entry['owner_name'],
-                                                        'owner_color' => $entry['owner_color'],
-                                                        'is_follow_up' => $entry['is_follow_up'],
-                                                        'follow_up_enabled' => $entry['follow_up_enabled'],
-                                                        'follow_up_days' => $entry['follow_up_days'],
-                                                        'tag' => $entry['tag'],
-                                                        'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
-                                                        'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
-                                                    ])->values()
-                                                )
-                                            )"
-                                            class="calendar-entry-more text-xs font-medium"
-                                        >
-                                            {{ __('+:count more', ['count' => $reminderDay['entries']->count() - 4]) }}
-                                        </button>
-                                    @endif
-                                </div>
-                            </section>
+                            @if($day['entries']->isNotEmpty())<span class="cal-mobile-dot" aria-hidden="true"></span>@endif
+                            <span class="cal-holiday-ribbon" x-show="holidaysFor('{{ $date }}').some(item => item.kind === 'holiday')" x-cloak><span class="cal-holiday-ribbon-band" aria-hidden="true">PH</span><span class="sr-only" x-text="holidaysFor('{{ $date }}').filter(item => item.kind === 'holiday').map(item => 'Public holiday: ' + item.name).join(', ')"></span></span>
+                            <span class="cal-holiday-ribbon cal-observance-ribbon" :class="{ 'cal-ribbon-secondary': holidaysFor('{{ $date }}').some(item => item.kind === 'holiday') }" x-show="holidaysFor('{{ $date }}').some(item => item.kind === 'observance')" x-cloak><span class="cal-holiday-ribbon-band" aria-hidden="true">OBS</span><span class="sr-only" x-text="holidaysFor('{{ $date }}').filter(item => item.kind === 'observance').map(item => 'Observance: ' + item.name).join(', ')"></span></span>
+                            @endif
+                        </button>
                         @endforeach
                     </div>
+                    @endforeach
                 </div>
-            </div>
-
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6">
-                    @if (session('status') === 'calendar-entry-created')
-                        <p class="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                            {{ __('Entry added to your calendar.') }}
-                        </p>
-                    @endif
-
-                    <div class="flex items-center justify-between gap-4">
-                        <a
-                            href="{{ route('dashboard', ['month' => $calendar->previousMonthQuery()]) }}"
-                            class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                            {{ __('Previous') }}
-                        </a>
-
-                        <div class="text-center">
-                            <h3 class="text-lg font-semibold text-gray-900">{{ $calendar->heading() }}</h3>
-                            <p class="text-sm text-gray-500">{{ __('Month view') }}</p>
-                        </div>
-
-                        <a
-                            href="{{ route('dashboard', ['month' => $calendar->nextMonthQuery()]) }}"
-                            class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                            {{ __('Next') }}
-                        </a>
+            </section>
+            <aside class="cal-agenda" aria-label="Daily agenda">
+                <section class="cal-agenda-day">
+                    <div class="cal-agenda-heading"><div><p class="cal-eyebrow" x-text="selectedDate === today ? 'TODAY' : 'YOUR DAY'"></p><h2 x-text="day.label"></h2></div><span class="cal-count" x-text="day.entries.length"></span></div>
+                    <div class="cal-agenda-list">
+                        <template x-for="entry in day.entries" :key="entry.id">
+                            <button type="button" class="cal-agenda-entry" x-on:click="open('detail', entry)"><span class="cal-owner-dot" :style="{backgroundColor:entry.owner_color}"></span><span class="cal-entry-copy"><strong x-text="entry.title"></strong><span class="cal-entry-description" x-show="entry.details" x-text="entry.details"></span><span class="cal-entry-meta"><span x-text="entry.owner_name"></span><span class="cal-badge" x-show="entry.is_follow_up">Follow Up</span></span></span><x-project-icon name="chevron"/></button>
+                        </template>
+                        <div class="cal-day-empty" x-show="!day.entries.length"><x-project-icon name="clock"/><h3>A little breathing room</h3><p>No entries for this day.</p></div>
                     </div>
-
-                    <div class="calendar-grid-wrap mt-6 overflow-hidden rounded-lg border border-gray-200 bg-gray-200">
-                            <table data-calendar-grid class="calendar-grid min-w-full border-separate border-spacing-px bg-gray-200">
-                                <thead>
-                                    <tr>
-                                        @foreach ($calendar->weekdayLabels as $weekday)
-                                            <th scope="col" class="bg-gray-50 px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                                {{ $weekday }}
-                                            </th>
-                                        @endforeach
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($calendar->weeks as $weekIndex => $week)
-                                        <tr data-calendar-week="{{ $weekIndex + 1 }}" class="align-top">
-                                            @foreach ($week as $day)
-                                                <td
-                                                    data-date="{{ $day['date']->toDateString() }}"
-                                                    class="{{ $day['is_current_month'] ? 'bg-white' : 'bg-gray-50' }} w-1/7"
-                                                >
-                                                    <div class="calendar-day-cell">
-                                                        <div class="calendar-day-meta flex items-start justify-between gap-2">
-                                                            <button
-                                                                type="button"
-                                                                x-on:click="showCreateModal(
-                                                                    @js($day['date']->toDateString()),
-                                                                    @js($day['date']->isoFormat('dddd, D MMMM YYYY'))
-                                                                )"
-                                                                class="inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition hover:bg-gray-100 {{ $day['is_today'] ? 'bg-gray-900 text-white hover:bg-gray-800' : ($day['is_current_month'] ? 'text-gray-900' : 'text-gray-400') }}"
-                                                                title="{{ __('Add something for this date') }}"
-                                                            >
-                                                                {{ $day['date']->day }}
-                                                            </button>
-                                                            @if ($day['entries']->isNotEmpty())
-                                                                <span class="calendar-day-count text-[11px] text-gray-400">
-                                                                    {{ trans_choice('{1} :count item|[2,*] :count items', $day['entries']->count(), ['count' => $day['entries']->count()]) }}
-                                                                </span>
-                                                            @endif
-                                                        </div>
-
-                                                        <div class="calendar-entry-stack">
-                                                            @if ($day['entries']->isNotEmpty())
-                                                                <button
-                                                                    type="button"
-                                                                    x-on:click="showDayModal(
-                                                                        @js($day['date']->isoFormat('dddd, D MMMM YYYY')),
-                                                                        @js(
-                                                                            $day['entries']->map(fn ($entry) => [
-                                                                                'id' => $entry['id'],
-                                                                                'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
-                                                                                'title' => $entry['title'],
-                                                                                'details' => $entry['details'],
-                                                                                'source_type' => $entry['source_type'],
-                                                                                'source_id' => $entry['source_id'],
-                                                                                'owner_name' => $entry['owner_name'],
-                                                                                'owner_color' => $entry['owner_color'],
-                                                                                'is_follow_up' => $entry['is_follow_up'],
-                                                                                'follow_up_enabled' => $entry['follow_up_enabled'],
-                                                                                'follow_up_days' => $entry['follow_up_days'],
-                                                                                'tag' => $entry['tag'],
-                                                                                'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
-                                                                                'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
-                                                                            ])->values()
-                                                                        )
-                                                                    )"
-                                                                    class="calendar-entry-mobile-summary"
-                                                                >
-                                                                    {{ $day['entries']->count() }}
-                                                                </button>
-                                                            @endif
-
-                                                            @foreach ($day['entries']->take(2) as $entry)
-                                                                <button
-                                                                    type="button"
-                                                                    x-data="{ hovered: false }"
-                                                                    x-on:mouseenter="hovered = true"
-                                                                    x-on:mouseleave="hovered = false"
-                                                                    x-on:click="showEntryModal(@js([
-                                                                        'id' => $entry['id'],
-                                                                        'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
-                                                                        'title' => $entry['title'],
-                                                                        'details' => $entry['details'],
-                                                                        'source_type' => $entry['source_type'],
-                                                                        'source_id' => $entry['source_id'],
-                                                                        'owner_name' => $entry['owner_name'],
-                                                                        'owner_color' => $entry['owner_color'],
-                                                                        'is_follow_up' => $entry['is_follow_up'],
-                                                                        'follow_up_enabled' => $entry['follow_up_enabled'],
-                                                                        'follow_up_days' => $entry['follow_up_days'],
-                                                                        'tag' => $entry['tag'],
-                                                                        'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
-                                                                        'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
-                                                                    ]))"
-                                                                    class="calendar-entry-pill block w-full text-left transition duration-150"
-                                                                    title="{{ $entry['details'] ?: __('Open this entry to see more information.') }}"
-                                                                    x-bind:style="`--calendar-entry-accent: {{ $entry['owner_color'] ?: '#8B5CF6' }}; --calendar-entry-surface: ${rgba('{{ $entry['owner_color'] ?: '#8B5CF6' }}', hovered ? 0.22 : 0.14)};`"
-                                                                >
-                                                                    <span class="calendar-entry-pill-label">
-                                                                        <span>{{ $entry['title'] }}</span>
-                                                                        @if ($entry['is_follow_up'])
-                                                                            <span class="entry-tag">{{ __('Follow Up') }}</span>
-                                                                        @endif
-                                                                    </span>
-                                                                </button>
-                                                            @endforeach
-
-                                                            @if ($day['entries']->count() > 2)
-                                                                <button
-                                                                    type="button"
-                                                                    x-on:click="showDayModal(
-                                                                        @js($day['date']->isoFormat('dddd, D MMMM YYYY')),
-                                                                        @js(
-                                                                            $day['entries']->map(fn ($entry) => [
-                                                                                'id' => $entry['id'],
-                                                                                'date' => $entry['date']->isoFormat('ddd, D MMM YYYY'),
-                                                                                'title' => $entry['title'],
-                                                                                'details' => $entry['details'],
-                                                                                'source_type' => $entry['source_type'],
-                                                                                'source_id' => $entry['source_id'],
-                                                                                'owner_name' => $entry['owner_name'],
-                                                                                'owner_color' => $entry['owner_color'],
-                                                                                'is_follow_up' => $entry['is_follow_up'],
-                                                                                'follow_up_enabled' => $entry['follow_up_enabled'],
-                                                                                'follow_up_days' => $entry['follow_up_days'],
-                                                                                'tag' => $entry['tag'],
-                                                                                'created_at' => $entry['created_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
-                                                                                'updated_at' => $entry['updated_at']?->isoFormat('ddd, D MMM YYYY, h:mm A'),
-                                                                            ])->values()
-                                                                        )
-                                                                    )"
-                                                                    class="calendar-entry-more text-xs font-medium"
-                                                                >
-                                                                    {{ __('+:count more', ['count' => $day['entries']->count() - 2]) }}
-                                                                </button>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            @endforeach
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                    <div class="cal-day-notes" x-show="holidaysFor(selectedDate).length" x-cloak>
+                        <template x-for="holiday in holidaysFor(selectedDate)" :key="holiday.kind + holiday.name"><div class="cal-day-note"><span class="cal-note-kind" x-text="holiday.kind === 'holiday' ? 'Public holiday' : 'Observance'"></span><span x-text="holiday.name"></span><small x-show="holiday.tentative">Date subject to confirmation</small></div></template>
                     </div>
-
-                    <p class="mt-4 text-xs text-gray-500">
-                        {{ __('Select any item to view more details.') }}
-                    </p>
-                </div>
-
-                <x-modal name="calendar-entry-details" maxWidth="lg">
-                    <div class="p-6">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <p class="text-sm text-gray-500" x-text="selectedEntry?.date"></p>
-                                <div class="mt-1 flex flex-wrap items-center gap-2">
-                                    <h3 class="text-lg font-semibold text-gray-900" x-text="selectedEntry?.title"></h3>
-                                    <span class="entry-tag" x-show="selectedEntry?.is_follow_up">{{ __('Follow Up') }}</span>
-                                </div>
-                                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
-                                    <div class="flex items-center gap-1.5" x-show="selectedEntry?.owner_color" :title="selectedEntry?.owner_name || '{{ __('Owner') }}'">
-                                        <span
-                                            class="h-2.5 w-2.5 rounded-full"
-                                            :style="selectedEntry?.owner_color ? `background-color: ${selectedEntry.owner_color}` : ''"
-                                        ></span>
-                                        <span class="sr-only" x-text="selectedEntry?.owner_name || '{{ __('Owner') }}'"></span>
-                                    </div>
-                                    <span x-show="selectedEntry?.created_at">
-                                        {{ __('Created') }}
-                                        <span x-text="selectedEntry?.created_at"></span>
-                                    </span>
-                                    <span x-show="selectedEntry?.updated_at && selectedEntry?.updated_at !== selectedEntry?.created_at">
-                                        {{ __('Updated') }}
-                                        <span x-text="selectedEntry?.updated_at"></span>
-                                    </span>
-                                    <span x-show="selectedEntry?.follow_up_enabled && ! selectedEntry?.is_follow_up">
-                                        {{ __('Follow-up in') }}
-                                        <span x-text="selectedEntry?.follow_up_days"></span>
-                                        {{ __('day(s)') }}
-                                    </span>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                x-on:click="$dispatch('close-modal', 'calendar-entry-details')"
-                                class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                            >
-                                {{ __('Close') }}
-                            </button>
-                        </div>
-
-                        <div class="mt-5 space-y-4 text-sm text-gray-700">
-                            <div class="rounded-2xl bg-gray-50 px-4 py-4">
-                                <p class="whitespace-pre-line leading-6 text-gray-600" x-text="selectedEntry?.details || '{{ __('No additional details for this entry.') }}'"></p>
-                            </div>
-
-                            <template x-if="selectedEntry?.source_type && selectedEntry.source_type !== 'self'">
-                                <div class="border-t border-gray-100 pt-4 text-xs text-gray-400">
-                                    <p>
-                                        <span x-text="selectedEntry?.source_type"></span>
-                                        <span x-show="selectedEntry?.source_id">#<span x-text="selectedEntry?.source_id"></span></span>
-                                    </p>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-                </x-modal>
-
-                <x-modal name="calendar-entry-create" maxWidth="lg">
-                    <div class="p-6">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <p class="text-sm text-gray-500">{{ __('Add to') }}</p>
-                                <h3 class="mt-1 text-lg font-semibold text-gray-900" x-text="createEntryLabel || '{{ __('Selected date') }}'"></h3>
-                            </div>
-                            <button
-                                type="button"
-                                x-on:click="$dispatch('close-modal', 'calendar-entry-create')"
-                                class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                            >
-                                {{ __('Close') }}
-                            </button>
-                        </div>
-
-                        <form method="POST" action="{{ route('dashboard.entries.store') }}" class="mt-6 space-y-4">
-                            @csrf
-
-                            <input type="hidden" name="entry_date" :value="createEntryDate">
-                            <input type="hidden" name="entry_date_label" :value="createEntryLabel">
-                            <input type="hidden" name="month" value="{{ $selectedMonthQuery }}">
-
-                            <div>
-                                <x-input-label for="calendar-entry-title" :value="__('Title')" />
-                                <x-text-input
-                                    id="calendar-entry-title"
-                                    name="title"
-                                    type="text"
-                                    class="mt-1 block w-full"
-                                    :value="old('title')"
-                                    required
-                                    maxlength="255"
-                                    autocomplete="off"
-                                />
-                                <x-input-error class="mt-2" :messages="$errors->get('title')" />
-                            </div>
-
-                            <div>
-                                <x-input-label for="calendar-entry-details-field" :value="__('Details')" />
-                                <textarea
-                                    id="calendar-entry-details-field"
-                                    name="details"
-                                    rows="4"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500"
-                                >{{ old('details') }}</textarea>
-                                <x-input-error class="mt-2" :messages="$errors->get('details')" />
-                            </div>
-
-                            <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
-                                <label class="flex items-start gap-3">
-                                    <input
-                                        x-model="createFollowUpEnabled"
-                                        type="checkbox"
-                                        name="follow_up_enabled"
-                                        value="1"
-                                        class="mt-1 rounded border-gray-300 text-rose-500 shadow-sm focus:ring-rose-500"
-                                    />
-                                    <span>
-                                        <span class="block text-sm font-medium text-gray-900">{{ __('Add follow-up reminder') }}</span>
-                                        <span class="mt-1 block text-xs text-gray-500">{{ __('Show a follow-up copy of this entry after the number of days you choose.') }}</span>
-                                    </span>
-                                </label>
-
-                                <div class="mt-4 max-w-xs" x-show="createFollowUpEnabled" x-cloak>
-                                    <x-input-label for="calendar-entry-follow-up-days" :value="__('Remind me after (days)')" />
-                                    <x-text-input
-                                        x-model="createFollowUpDays"
-                                        id="calendar-entry-follow-up-days"
-                                        name="follow_up_days"
-                                        type="number"
-                                        min="1"
-                                        max="30"
-                                        class="mt-1 block w-full"
-                                        :value="$createFollowUpDays"
-                                    />
-                                    <x-input-error class="mt-2" :messages="$errors->get('follow_up_days')" />
-                                </div>
-                            </div>
-
-                            <x-input-error class="mt-2" :messages="$errors->get('entry_date')" />
-
-                            <div class="flex items-center gap-3">
-                                <x-primary-button>{{ __('Save entry') }}</x-primary-button>
-                                <p class="text-xs text-gray-500">{{ __('This will be linked to your account automatically.') }}</p>
-                            </div>
-                        </form>
-                    </div>
-                </x-modal>
-
-                <x-modal name="calendar-day-details" maxWidth="2xl">
-                    <div class="p-6">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <p class="text-sm text-gray-500">{{ __('More for') }}</p>
-                                <h3 class="mt-1 text-lg font-semibold text-gray-900" x-text="selectedDay"></h3>
-                            </div>
-                            <button
-                                type="button"
-                                x-on:click="$dispatch('close-modal', 'calendar-day-details')"
-                                class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                            >
-                                {{ __('Close') }}
-                            </button>
-                        </div>
-
-                        <div class="mt-6 space-y-3">
-                            <template x-for="entry in selectedDayEntries" :key="entry.id">
-                                <button
-                                    type="button"
-                                    x-data="{ hovered: false }"
-                                    x-on:mouseenter="hovered = true"
-                                    x-on:mouseleave="hovered = false"
-                                    x-on:click="selectedEntry = entry; $dispatch('close-modal', 'calendar-day-details'); $dispatch('open-modal', 'calendar-entry-details')"
-                                    class="block w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-left hover:border-gray-300 hover:bg-gray-100"
-                                    :style="entry.owner_color ? `background-color: ${hovered ? rgba(entry.owner_color, 0.12) : '#f9fafb'}` : ''"
-                                    :title="entry.details || '{{ __('Open this entry to see more information.') }}'"
-                                >
-                                    <div class="flex items-center gap-2">
-                                        <span
-                                            class="h-2.5 w-2.5 shrink-0 rounded-full"
-                                            :style="entry.owner_color ? `background-color: ${entry.owner_color}` : ''"
-                                            x-show="entry.owner_color"
-                                        ></span>
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <div class="truncate text-sm font-medium text-gray-900" x-text="entry.title"></div>
-                                            <span class="entry-tag" x-show="entry.is_follow_up">{{ __('Follow Up') }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="mt-1 truncate text-xs text-gray-500" x-text="entry.details || '{{ __('No additional details for this entry.') }}'"></div>
-                                </button>
-                            </template>
-                        </div>
-                    </div>
-                </x-modal>
-            </div>
+                    <button class="cal-add-row" type="button" x-on:click="open('create')"><x-project-icon name="plus"/> Add entry</button>
+                </section>
+                <section class="cal-upcoming">
+                    <div class="cal-section-heading"><x-project-icon name="clock"/><h2>Upcoming</h2></div>
+                    @foreach ($reminderDays as $reminderDay)
+                        <div class="cal-upcoming-day"><div class="cal-upcoming-label"><strong>{{ $reminderDay['label'] }}</strong><span>{{ $reminderDay['date_display'] }}</span></div>
+                        @forelse ($reminderDay['entries'] as $entry)
+                            <button type="button" class="cal-upcoming-entry" x-on:click="open('detail', @js($entryData($entry)))"><span class="cal-owner-dot" style="background-color: {{ $entry['owner_color'] ?? '#718578' }}"></span><span><strong>{{ $entry['title'] }}</strong><small>{{ $entry['owner_name'] ?? 'Unassigned' }}@if($entry['is_follow_up']) · Follow Up @endif</small></span><x-project-icon name="chevron"/></button>
+                        @empty
+                            <p class="cal-upcoming-empty">No entries</p>
+                        @endforelse
+                        <span class="cal-upcoming-holiday" x-show="holidaysFor('{{ $reminderDay['date']->toDateString() }}').length" x-text="holidayLabel('{{ $reminderDay['date']->toDateString() }}')" x-cloak></span></div>
+                    @endforeach
+                </section>
+            </aside>
         </div>
+        <template x-if="modal">
+            <div class="cal-modal-overlay" x-on:click.self="close()">
+                <section class="cal-dialog" :role="modal === 'delete' ? 'alertdialog' : 'dialog'" aria-modal="true" aria-labelledby="cal-dialog-title" :aria-busy="busy" x-on:keydown="trap($event)">
+                    <div class="cal-dialog-heading"><div><span class="cal-dialog-kicker" x-show="modal === 'detail'" x-text="selectedEntry?.date_label"></span><h2 id="cal-dialog-title" x-text="modal === 'create' ? 'Add entry' : modal === 'edit' ? 'Edit entry' : modal === 'delete' ? 'Delete entry?' : selectedEntry?.title"></h2></div><button id="cal-modal-cancel" type="button" class="pr-button" x-on:click="close()" :disabled="busy" x-text="modal === 'delete' ? 'Cancel' : 'Close'"></button></div>
+                    <template x-if="modal === 'detail'"><div>
+                        <div class="cal-detail-meta"><span class="cal-owner-dot" :style="{backgroundColor:selectedEntry.owner_color}"></span><span x-text="selectedEntry.owner_name"></span><span class="cal-badge" x-show="selectedEntry.is_follow_up">Follow Up</span></div>
+                        <p class="cal-detail-description" x-text="selectedEntry.details || 'No additional details.'"></p>
+                        <p class="cal-follow-summary" x-show="selectedEntry.follow_up_enabled && !selectedEntry.is_follow_up" x-text="`Follow-up after ${selectedEntry.follow_up_days} days`"></p>
+                        <p class="cal-follow-summary" x-show="selectedEntry.is_follow_up">Changes apply to the original entry and its follow-up.</p>
+                        <div class="cal-dialog-footer" x-show="selectedEntry.can_manage"><button type="button" class="pr-button pr-danger-text" x-on:click="open('delete', selectedEntry)"><x-project-icon name="trash"/> Delete</button><button type="button" class="pr-button pr-button-dark" x-on:click="open('edit', selectedEntry)"><x-project-icon name="edit"/> Edit entry</button></div>
+                    </div></template>
+                    <template x-if="modal === 'create' || modal === 'edit'">
+                        <form class="cal-form" x-on:submit.prevent="submit()">
+                            <label for="cal-title-input">Title</label><input id="cal-title-input" x-model="form.title" required maxlength="255" :disabled="busy" autocomplete="off">
+                            <label for="cal-date-input">Date</label><input id="cal-date-input" type="date" x-model="form.entry_date" required :disabled="busy">
+                            <label for="cal-details-input">Details <span>(optional)</span></label><textarea id="cal-details-input" x-model="form.details" rows="3" :disabled="busy"></textarea>
+                            <div class="cal-follow-box"><label class="cal-follow-toggle"><input type="checkbox" x-model="form.follow_up_enabled" :disabled="busy"><span>Add a follow-up</span></label><div x-show="form.follow_up_enabled" class="cal-follow-fields"><label for="cal-follow-days">After</label><input id="cal-follow-days" type="number" min="1" max="30" x-model.number="form.follow_up_days" :required="form.follow_up_enabled" :disabled="!form.follow_up_enabled || busy"><span>days</span><small x-text="followUpLabel"></small></div></div>
+                            <p class="cal-error" role="alert" x-show="error" x-text="error"></p>
+                            <div class="cal-dialog-footer"><button type="button" class="pr-button" x-on:click="close()" :disabled="busy">Cancel</button><button type="submit" class="pr-button pr-button-dark" :disabled="busy" x-text="busy ? 'Saving…' : modal === 'edit' ? 'Save changes' : 'Save entry'"></button></div>
+                        </form>
+                    </template>
+                    <template x-if="modal === 'delete'"><form x-on:submit.prevent="submit()"><div class="cal-delete-warning"><x-project-icon name="warning"/><strong x-text="selectedEntry.title"></strong><p>This permanently deletes the entry and its follow-up reminder, if enabled.</p><p>This cannot be undone.</p></div><p class="cal-error" role="alert" x-show="error" x-text="error"></p><div class="cal-dialog-footer"><button type="button" class="pr-button" x-on:click="close()" :disabled="busy">Cancel</button><button type="submit" class="pr-button pr-button-danger" :disabled="busy" x-text="busy ? 'Deleting…' : 'Delete entry'"></button></div></form></template>
+                </section>
+            </div>
+        </template>
     </div>
 </x-app-layout>

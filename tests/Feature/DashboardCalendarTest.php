@@ -47,19 +47,15 @@ class DashboardCalendarTest extends TestCase
         $response->assertSee('data-calendar-week="5"', false);
         $response->assertSee('data-date="2026-03-29"', false);
         $response->assertSee('data-date="2026-05-02"', false);
-        $response->assertSee('calendar-entry-details', false);
-        $response->assertSee('calendar-entry-create', false);
-        $response->assertSee('calendar-day-details', false);
+        $response->assertSee('cal-dialog-title', false);
+        $response->assertSee('cal-title-input', false);
+        $response->assertSee('Daily agenda');
         $response->assertSee('Project kickoff');
         $response->assertSee('Budget review');
         $response->assertSee('background-color: #3B82F6', false);
         $response->assertSee('data-date="2026-04-10"', false);
         $response->assertDontSee('Out of month entry');
         $response->assertSee('Initial planning session');
-        $response->assertSee('Created');
-        $response->assertSee('Updated');
-        $response->assertSee('created_at', false);
-        $response->assertSee('updated_at', false);
         $response->assertDontSee('Added here');
     }
 
@@ -192,8 +188,8 @@ class DashboardCalendarTest extends TestCase
                 ->get('/dashboard?month=2026-04');
 
             $response->assertOk();
-            $response->assertSee('Reminder');
-            $response->assertSee('The next few days at a glance');
+            $response->assertSee('Upcoming');
+            $response->assertSee('Daily agenda');
             $response->assertSee('Today');
             $response->assertSee('Tomorrow');
             $response->assertSee('Thursday');
@@ -232,7 +228,7 @@ class DashboardCalendarTest extends TestCase
             $response->assertSee('Weekend');
             $response->assertSee('Fri, 17 Apr');
             $response->assertSee('Sat, 18 Apr & Sun, 19 Apr');
-            $response->assertSee('Nothing lined up here.');
+            $response->assertSee('No entries');
         } finally {
             CarbonImmutable::setTestNow();
         }
@@ -268,7 +264,7 @@ class DashboardCalendarTest extends TestCase
             $response->assertOk();
             $response->assertSee('Weekend');
             $response->assertSee('Sat, 18 Apr & Sun, 19 Apr');
-            $response->assertSee('Nothing lined up here.');
+            $response->assertSee('No entries');
         } finally {
             CarbonImmutable::setTestNow();
         }
