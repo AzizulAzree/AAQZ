@@ -44,6 +44,16 @@ document.addEventListener('alpine:init', () => {
         isDragging: false,
         isSaving: false,
         isSaved: false,
+        activeFormats: {},
+        editorSelection: null,
+        formatOptions: [
+            { command: 'bold', label: 'Bold', icon: 'B' },
+            { command: 'italic', label: 'Italic', icon: 'I' },
+            { command: 'strikeThrough', label: 'Strikethrough', icon: 'S' },
+            { command: 'insertUnorderedList', label: 'Bullet list', icon: '' },
+            { command: 'insertOrderedList', label: 'Numbered list', icon: '' },
+            { command: 'removeFormat', label: 'Clear style', icon: 'Tx' },
+        ],
         saveTimer: null,
         dragOffsetX: 0,
         dragOffsetY: 0,
@@ -133,9 +143,28 @@ document.addEventListener('alpine:init', () => {
             document.execCommand('insertText', false, text);
         },
 
-        applyStrike() {
-            this.$refs.editor?.focus();
-            document.execCommand('strikeThrough');
+        rememberSelection() {
+            const selection = window.getSelection();
+            if (selection?.rangeCount && this.$refs.editor?.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+                this.editorSelection = selection.getRangeAt(0).cloneRange();
+                this.activeFormats = Object.fromEntries(this.formatOptions
+                    .filter(option => option.command !== 'removeFormat')
+                    .map(option => [option.command, document.queryCommandState(option.command)]));
+            }
+        },
+
+        applyFormat(command) {
+            if (! this.formatOptions.some(option => option.command === command)) return;
+            const editor = this.$refs.editor;
+            const selection = window.getSelection();
+            const selectionInEditor = selection?.rangeCount && editor?.contains(selection.getRangeAt(0).commonAncestorContainer);
+            editor?.focus();
+            if (! selectionInEditor && this.editorSelection && editor?.contains(this.editorSelection.commonAncestorContainer)) {
+                selection.removeAllRanges();
+                selection.addRange(this.editorSelection);
+            }
+            document.execCommand(command, false, null);
+            this.rememberSelection();
             this.queueSaveFromEditor();
         },
 

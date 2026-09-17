@@ -25,7 +25,7 @@
     @endphp
     <div class="cal-page" x-data="calendarDashboard(@js($config))" x-on:keydown.escape.window="close()">
         <header class="cal-header">
-            <div><p class="cal-eyebrow">MAKE ROOM FOR WHAT MATTERS</p><h1>Calendar</h1></div>
+            <div><p class="cal-eyebrow">MAKE ROOM FOR WHAT MATTERS</p><h1>Dashboard</h1></div>
             <button type="button" class="pr-button pr-button-dark" x-on:click="open('create')"><x-project-icon name="plus"/> Add entry</button>
         </header>
         @if (session('status') === 'calendar-entry-created')<p class="pr-notice" role="status">Entry added to your calendar.</p>@endif

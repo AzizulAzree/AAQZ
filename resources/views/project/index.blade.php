@@ -65,8 +65,16 @@
                             <div class="pr-folder-card">
                             <x-project-actions item="item" kind="folder"/>
                             <button class="pr-folder-open" type="button" x-on:click="navigate(activeId, item.id)">
-                                <span class="pr-folder-symbol"><x-project-icon name="folder"/></span><x-project-icon name="chevron" class="pr-folder-chevron"/>
+                                <span class="pr-folder-symbol" aria-hidden="true">
+                                    <svg class="pr-folder-art" viewBox="0 0 120 96" fill="none">
+                                        <path d="M9 22a7 7 0 0 1 7-7h27l11 10h50a7 7 0 0 1 7 7v46a8 8 0 0 1-8 8H17a8 8 0 0 1-8-8Z" fill="#8fa681" stroke="#7e9771"/>
+                                        <path d="M19 32h82v44H19z" fill="#f1f4e9"/>
+                                        <path d="M16 37h88a7 7 0 0 1 7 8l-5 34a8 8 0 0 1-8 7H22a8 8 0 0 1-8-7L9 45a7 7 0 0 1 7-8Z" fill="#c9d6b7" stroke="#a4b992"/>
+                                        <path d="M18 40h84" stroke="#e6eddc" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                </span>
                                 <strong x-text="item.name"></strong><span class="pr-muted" x-text="`${item.children.length} ${item.children.length === 1 ? 'item' : 'items'}`"></span>
+                                <span class="pr-folder-description" x-show="item.description" x-text="item.description"></span>
                                 <span class="pr-item-path" x-show="query.trim() && item.trail.length" x-text="item.trail.map(p => p.name).join(' / ')"></span>
                             </button>
                             </div>

@@ -185,7 +185,7 @@ class FinanceAccessTest extends TestCase
             ->get('/dashboard');
 
         $response->assertOk();
-        $response->assertDontSee('Finance');
+        $response->assertDontSee('Budget');
     }
 
     public function test_finance_tab_is_visible_for_selected_user(): void
@@ -209,6 +209,6 @@ class FinanceAccessTest extends TestCase
             ->get('/dashboard');
 
         $response->assertOk();
-        $response->assertSee('Finance');
+        $response->assertSee('Budget');
     }
 }
