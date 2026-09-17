@@ -1,5 +1,7 @@
 <x-app-layout>
     <div class="pr-page" x-data="projectBrowser(@js($workspaces), @js($recentShortcuts->values()))"
+        data-store-node-url="{{ route('project.nodes.store') }}"
+        x-on:beforeunload.window="if (noteDirty) { $event.preventDefault(); $event.returnValue = ''; }"
         x-on:keydown.escape.window="closeModals()"
         x-init="$nextTick(() => {
             @if ($errors->any())
@@ -26,26 +28,26 @@
                     <template x-for="workspace in workspaces" :key="workspace.id">
                         <div class="pr-workspace-row" :class="{ 'is-active': activeId === workspace.id }">
                         <button type="button" class="pr-workspace" :class="{ 'is-active': activeId === workspace.id }" :aria-current="activeId === workspace.id ? 'true' : null" x-on:click="navigate(workspace.id)">
-                            <x-project-icon name="grid"/><span x-text="workspace.name"></span><span class="pr-workspace-count" x-text="workspace.shortcut_count"></span>
+                            <x-project-icon name="grid"/><span x-text="workspace.name"></span><span class="pr-workspace-count" x-text="workspace.shortcut_count + (workspace.note_count ?? 0)"></span>
                         </button>
                         <x-project-actions item="workspace" kind="workspace"/>
                         </div>
                     </template>
                 </nav>
                 <button class="pr-workspace pr-workspace-add" type="button" x-on:click="openWorkspaceModal()"><x-project-icon name="plus"/><span>New workspace</span></button>
-                <div class="pr-sidebar-footer"><x-project-icon name="link"/><span>Your links, organized.</span></div>
+                <div class="pr-sidebar-footer"><x-project-icon name="folder"/><span>Your links and notes, organized.</span></div>
                 </div>
             </aside>
             <main class="pr-content">
                 <div class="pr-welcome" x-show="!active">
                     <span class="pr-empty-icon"><x-project-icon name="grid"/></span>
-                    <h2>A home for your project links</h2>
-                    <p>Keep documents, tools, and useful links together.</p>
+                    <h2>A home for your project resources</h2>
+                    <p>Keep useful links and important notes together.</p>
                     <button type="button" class="pr-button pr-button-dark" x-on:click="openWorkspaceModal()"><x-project-icon name="plus"/> Create workspace</button>
                 </div>
                 <section x-show="active" x-cloak>
                     <div class="pr-content-header">
-                        <div class="pr-heading-copy"><p class="pr-eyebrow">WORKSPACE</p><h2 x-text="active?.name"></h2><p class="pr-muted" x-text="`${active?.folder_count ?? 0} folders · ${active?.shortcut_count ?? 0} links`"></p></div>
+                        <div class="pr-heading-copy"><p class="pr-eyebrow">WORKSPACE</p><h2 x-text="active?.name"></h2><p class="pr-muted" x-text="`${active?.folder_count ?? 0} folders · ${active?.shortcut_count ?? 0} links · ${active?.note_count ?? 0} notes`"></p></div>
                         <label class="pr-search"><x-project-icon name="search"/><input type="search" x-model="query" placeholder="Search this workspace" aria-label="Search this workspace"></label>
                     </div>
                     <div class="pr-toolbar">
@@ -57,12 +59,23 @@
                             <button type="button" x-on:click="navigate(activeId)" :aria-current="!folderId ? 'page' : null">All folders</button>
                             <template x-for="crumb in crumbs" :key="crumb.id"><span><x-project-icon name="chevron"/><button type="button" x-text="crumb.name" x-on:click="navigate(activeId, crumb.id)" :aria-current="folderId === crumb.id ? 'page' : null"></button></span></template>
                         </nav>
-                        <div class="pr-actions"><button class="pr-button" type="button" x-on:click="openNodeModal('folder')"><x-project-icon name="folder"/> New folder</button><button class="pr-button pr-button-dark" type="button" x-show="folderId" x-on:click="openNodeModal('shortcut')"><x-project-icon name="plus"/> Add link</button></div>
+                        <div class="pr-actions">
+                            <div class="pr-add-item" x-on:click.outside="addItemOpen = false">
+                                <button class="pr-button pr-button-dark" type="button" x-on:click="addItemOpen = !addItemOpen" :aria-expanded="addItemOpen" aria-controls="pr-add-menu"><x-project-icon name="plus"/> Add item</button>
+                                <div id="pr-add-menu" class="pr-item-menu" x-show="addItemOpen" x-cloak>
+                                    <button type="button" x-on:click="openNodeModal('folder')"><x-project-icon name="folder"/> New folder</button>
+                                    <button type="button" x-show="folderId" x-on:click="openNodeModal('shortcut')"><x-project-icon name="link"/> Link shortcut</button>
+                                    <button type="button" x-show="folderId" x-on:click="openNote()"><x-project-icon name="document"/> Note</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <p class="pr-result-label" x-show="query.trim()" x-text="`${items.length} results in this workspace`" role="status"></p>
-                    <div class="pr-folder-grid" x-show="folders.length">
-                        <template x-for="item in folders" :key="item.id">
-                            <div class="pr-folder-card">
+                    <div class="pr-folder-grid" x-show="items.length" aria-label="Folder contents">
+                        <template x-for="item in items" :key="item.id">
+                            <div class="pr-grid-item">
+                                <template x-if="item.type === 'folder'">
+<div class="pr-folder-card">
                             <x-project-actions item="item" kind="folder"/>
                             <button class="pr-folder-open" type="button" x-on:click="navigate(activeId, item.id)">
                                 <span class="pr-folder-symbol" aria-hidden="true">
@@ -78,31 +91,53 @@
                                 <span class="pr-item-path" x-show="query.trim() && item.trail.length" x-text="item.trail.map(p => p.name).join(' / ')"></span>
                             </button>
                             </div>
-                        </template>
-                    </div>
-                    <div class="pr-link-list" x-show="links.length">
-                        <div class="pr-list-label">Links</div>
-                        <template x-for="item in links" :key="item.id">
-                            <div class="pr-link-wrapper">
-                            <a class="pr-link-row" :href="item.open_url" target="_blank" rel="noopener noreferrer">
-                                <span class="pr-link-symbol"><x-project-icon name="link"/></span>
-                                <span class="pr-link-copy">
-                                    <strong x-text="item.name"></strong>
-                                    <span class="pr-link-description" x-show="item.description" x-text="item.description"></span>
-                                    <span class="pr-link-url" x-text="item.url"></span>
-                                    <small x-show="query.trim()" x-text="item.trail.map(p => p.name).join(' / ')"></small>
+                                </template>
+                                <template x-if="item.type === 'shortcut'">
+<div class="pr-folder-card pr-shortcut-card">
+                            <a class="pr-folder-open pr-shortcut-open" :href="item.open_url" target="_blank" rel="noopener noreferrer">
+                                <span class="pr-folder-symbol" aria-hidden="true">
+                                    <svg class="pr-folder-art" viewBox="0 0 120 96" fill="none">
+                                        <rect x="13" y="15" width="94" height="70" rx="9" fill="#e9efe2" stroke="#a4b992"/>
+                                        <path d="M13 24a9 9 0 0 1 9-9h76a9 9 0 0 1 9 9v9H13Z" fill="#b7c9a7"/>
+                                        <path d="M24 24h1m7 0h1m7 0h1" stroke="#6e8962" stroke-width="3" stroke-linecap="round"/>
+                                        <path d="m55 55 6-6a9 9 0 0 1 13 13l-6 6m-3-16-6 6m-3-3-6 6a9 9 0 0 0 13 13l6-6" stroke="#7b976c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" transform="translate(-3 -4)"/>
+                                        <rect x="8" y="65" width="27" height="25" rx="6" fill="#fff" stroke="#b2c5a4"/>
+                                        <path d="M15 82v-5h12m-5-5 5 5-5 5" stroke="#648257" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
                                 </span>
-                                <x-project-icon name="arrow"/>
+                                    <strong x-text="item.name"></strong>
+                                    <span class="pr-folder-description" x-show="item.description" x-text="item.description"></span>
+                                    <span class="pr-shortcut-url" x-text="item.url"></span>
+                                    <span class="pr-item-path" x-show="query.trim()" x-text="item.trail.map(p => p.name).join(' / ')"></span>
                             </a>
                             <x-project-actions item="item" kind="link"/>
+                            </div>
+                                </template>
+                                <template x-if="item.type === 'note'">
+<div class="pr-folder-card">
+                                <button class="pr-folder-open" type="button" x-on:click="openNote(item)">
+                                    <span class="pr-folder-symbol" aria-hidden="true">
+                                        <svg class="pr-folder-art" viewBox="0 0 120 96" fill="none">
+                                            <path d="M32 9h40l20 20v53a6 6 0 0 1-6 6H32a6 6 0 0 1-6-6V15a6 6 0 0 1 6-6Z" fill="#eff3e7" stroke="#a4b992"/>
+                                            <path d="M72 9v14a6 6 0 0 0 6 6h14" fill="#c9d6b7" stroke="#a4b992" stroke-linejoin="round"/>
+                                            <path d="M39 41h39M39 52h39M39 63h31M39 74h22" stroke="#afc09d" stroke-width="3" stroke-linecap="round"/>
+                                        </svg>
+                                    </span>
+                                    <strong x-text="item.name"></strong>
+                                    <span class="pr-item-path" x-show="query.trim()" x-text="item.trail.map(p => p.name).join(' / ')"></span>
+                                </button>
+                                <x-project-actions item="item" kind="note"/>
+                            </div>
+                                </template>
                             </div>
                         </template>
                     </div>
                     <div class="pr-empty" x-show="!items.length">
                         <span class="pr-empty-icon"><template x-if="query.trim()"><x-project-icon name="search"/></template><template x-if="!query.trim()"><x-project-icon name="folder"/></template></span>
                         <h3 x-text="query.trim() ? 'No matches found' : folderId ? 'This folder is empty' : 'Your workspace is ready'"></h3>
-                        <p x-text="query.trim() ? 'Try another name or keyword.' : folderId ? 'Save your first link here.' : 'Add a folder for your project links.'"></p>
+                        <p x-text="query.trim() ? 'Try another name or keyword.' : folderId ? 'Add a link or save an important note here.' : 'Add a folder for your links and notes.'"></p>
                         <button type="button" class="pr-button pr-button-dark" x-show="!query.trim()" x-on:click="openNodeModal(folderId ? 'shortcut' : 'folder')"><x-project-icon name="plus"/><span x-text="folderId ? 'Add link' : 'New folder'"></span></button>
+                        <button type="button" class="pr-button" x-show="!query.trim() && folderId" x-on:click="openNote()"><x-project-icon name="document"/> Add note</button>
                     </div>
                 </section>
             </main>
@@ -117,6 +152,35 @@
                 @endforelse
             </div>
         </section>
+        <template x-if="noteOpen">
+            <div class="pr-note-overlay" x-on:click.self="closeModals()">
+                <section class="pr-note-dialog" :class="{ 'pr-note-readonly': !noteEditing && !discardNote }" role="dialog" aria-modal="true" aria-labelledby="pr-note-heading" x-on:keydown="trapFocus($event)" :aria-busy="busy">
+                    <template x-if="!discardNote && !noteEditing">
+                        <div class="pr-note-reader">
+                            <button class="pr-note-reader-close" type="button" x-on:click="closeModals()" aria-label="Close note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+                            <article id="pr-note-paper" class="pr-note-paper" tabindex="0" aria-label="Note content">
+                                <h3 id="pr-note-heading" x-text="noteName"></h3>
+                                <div class="pr-note-text" x-text="noteContent"></div>
+                            </article>
+                        </div>
+                    </template>
+                    <template x-if="!discardNote && noteEditing">
+                        <form x-on:submit.prevent="saveNote()">
+                            <div class="pr-note-header"><h2 id="pr-note-heading"><x-project-icon name="document"/><span x-text="noteItem ? 'Note' : 'New note'"></span></h2><button class="pr-button" type="button" x-on:click="closeModals()" :disabled="busy">Close</button></div>
+                            <div class="pr-note-fields">
+                                <label for="pr-note-name">Title</label><input id="pr-note-name" x-model="noteName" required maxlength="255" :disabled="busy" placeholder="Give your note a title">
+                                <label for="pr-note-content">Note</label><textarea id="pr-note-content" x-model="noteContent" required maxlength="100000" :disabled="busy" placeholder="Write your note…"></textarea>
+                                <p class="pr-manage-error" role="alert" x-show="noteError" x-text="noteError"></p>
+                            </div>
+                            <div class="pr-note-footer"><button type="button" class="pr-button" x-on:click="closeModals()" :disabled="busy">Cancel</button><button type="submit" class="pr-button pr-button-dark" :disabled="busy || !noteDirty" x-text="busy ? 'Saving…' : 'Save changes'"></button></div>
+                        </form>
+                    </template>
+                    <template x-if="discardNote">
+                        <div class="pr-note-discard"><x-project-icon name="warning"/><h2 id="pr-note-heading">Discard changes?</h2><p>Your changes to this note have not been saved.</p><div class="pr-note-footer"><button id="pr-keep-editing" type="button" class="pr-button pr-button-dark" x-on:click="discardNote = false; $nextTick(() => document.getElementById('pr-note-name')?.focus())">Keep editing</button><button type="button" class="pr-button pr-button-danger" x-on:click="discardNoteChanges()">Discard changes</button></div></div>
+                    </template>
+                </section>
+            </div>
+        </template>
         <template x-if="manage">
             <div class="pr-manage-overlay" x-on:click.self="closeModals()">
                 <section class="pr-manage-dialog" :role="manage.mode === 'delete' ? 'alertdialog' : 'dialog'" aria-modal="true" aria-labelledby="manage-title" aria-describedby="manage-warning" x-on:keydown="trapFocus($event)" :aria-busy="busy">

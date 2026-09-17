@@ -20,7 +20,8 @@ class StoreWorkspaceNodeRequest extends FormRequest
         return [
             'workspace_id' => ['required', 'integer', 'exists:workspaces,id'],
             'parent_id' => ['nullable', 'integer', 'exists:workspace_nodes,id'],
-            'type' => ['required', Rule::in(['folder', 'shortcut'])],
+            'type' => ['required', Rule::in(['folder', 'shortcut', 'note'])],
+            'content' => ['exclude_unless:type,note', 'required', 'string', 'max:100000'],
             'name' => ['required', 'string', 'max:255'],
             'url' => ['nullable', 'url', 'required_if:type,shortcut', 'max:2048'],
             'description' => ['nullable', 'string'],
@@ -41,8 +42,8 @@ class StoreWorkspaceNodeRequest extends FormRequest
             $parentId = $this->input('parent_id');
 
             if ($parentId === null || $parentId === '') {
-                if ($this->string('type')->toString() === 'shortcut') {
-                    $validator->errors()->add('parent_id', __('Shortcuts must be created inside a folder.'));
+                if (in_array($this->string('type')->toString(), ['shortcut', 'note'], true)) {
+                    $validator->errors()->add('parent_id', __('Links and notes must be created inside a folder.'));
                 }
 
                 return;

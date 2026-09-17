@@ -53,6 +53,21 @@ class DashboardController extends Controller
         $reminderDays = $this->buildReminderDays($reminderDisplayDates, $reminderEntries);
 
         return view('dashboard', [
+            'workspaceWidget' => $request->user()->workspaces()->with(['nodes' => fn ($query) => $query
+                ->select(['id', 'workspace_id', 'parent_id', 'type', 'name', 'url', 'sort_order'])
+                ->orderBy('sort_order')->orderBy('name')])->get()->map(fn ($workspace) => [
+                    'id' => $workspace->id,
+                    'name' => $workspace->name,
+                    'url' => route('project.index', ['workspace' => $workspace->id]),
+                    'nodes' => $workspace->nodes->map(fn ($node) => [
+                        'id' => $node->id, 'parent_id' => $node->parent_id, 'type' => $node->type, 'name' => $node->name,
+                        'url' => match ($node->type) {
+                            'shortcut' => route('project.shortcuts.open', $node),
+                            'note' => route('project.notes.show', $node),
+                            default => null,
+                        },
+                    ])->values(),
+                ])->values(),
             'calendar' => $calendar->withEntries(
                 $entryCollector->forRange($calendar->gridStartsAt(), $calendar->gridEndsAt()),
             ),

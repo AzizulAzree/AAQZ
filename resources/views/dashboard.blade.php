@@ -92,6 +92,7 @@
                         <span class="cal-upcoming-holiday" x-show="holidaysFor('{{ $reminderDay['date']->toDateString() }}').length" x-text="holidayLabel('{{ $reminderDay['date']->toDateString() }}')" x-cloak></span></div>
                     @endforeach
                 </section>
+                @include('dashboard-workspaces')
             </aside>
         </div>
         <template x-if="modal">

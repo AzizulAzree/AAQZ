@@ -29,6 +29,7 @@ class ProjectController extends Controller
                 'folders' => $this->buildTree($workspace->nodes),
                 'folder_count' => $workspace->nodes->where('type', 'folder')->count(),
                 'shortcut_count' => $workspace->nodes->where('type', 'shortcut')->count(),
+                'note_count' => $workspace->nodes->where('type', 'note')->count(),
             ]);
 
         $recentShortcuts = $user->recentShortcuts()
@@ -60,7 +61,7 @@ class ProjectController extends Controller
             ->with('status', 'workspace-created');
     }
 
-    public function storeNode(StoreWorkspaceNodeRequest $request): RedirectResponse
+    public function storeNode(StoreWorkspaceNodeRequest $request): RedirectResponse|JsonResponse
     {
         $workspace = $request->user()->workspaces()->findOrFail($request->integer('workspace_id'));
         $parentId = $request->filled('parent_id') ? $request->integer('parent_id') : null;
@@ -70,6 +71,7 @@ class ProjectController extends Controller
             'parent_id' => $parentId,
             'type' => $request->string('type')->toString(),
             'name' => $request->string('name')->toString(),
+            'content' => $request->input('type') === 'note' ? $request->input('content') : null,
             'url' => $request->string('type')->toString() === 'shortcut'
                 ? $request->string('url')->toString()
                 : null,
@@ -78,6 +80,10 @@ class ProjectController extends Controller
                 : null,
             'sort_order' => $this->nextSortOrder($workspace->id, $parentId),
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['redirect' => route('project.index', array_filter(['workspace' => $workspace->id, 'folder' => $parentId]))], 201);
+        }
 
         return redirect()
             ->route('project.index', array_filter(['workspace' => $workspace->id, 'folder' => $parentId]))
@@ -100,6 +106,15 @@ class ProjectController extends Controller
         );
 
         return redirect()->away($workspaceNode->url);
+    }
+
+    public function showNote(Request $request, WorkspaceNode $workspaceNode): JsonResponse
+    {
+        abort_unless($workspaceNode->isNote(), 404);
+        abort_unless($workspaceNode->workspace->user_id === $request->user()->id, 403);
+
+        return response()->json(['name' => $workspaceNode->name, 'content' => $workspaceNode->content])
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function updateWorkspace(Request $request, Workspace $workspace): JsonResponse
@@ -127,6 +142,9 @@ class ProjectController extends Controller
             $rules['url'] = ['required', 'url:http,https', 'max:255'];
             $rules['description'] = ['nullable', 'string'];
         }
+        if ($workspaceNode->isNote()) {
+            $rules['content'] = ['required', 'string', 'max:100000'];
+        }
         $workspaceNode->update($request->validate($rules));
 
         return response()->json(['redirect' => route('project.index', array_filter([
@@ -150,6 +168,15 @@ class ProjectController extends Controller
             ->filter(fn (WorkspaceNode $node) => $node->parent_id === $parentId)
             ->sortBy(['sort_order', 'name'])
             ->map(function (WorkspaceNode $node) use ($nodes): array {
+                if ($node->isNote()) {
+                    return [
+                        'id' => $node->id,
+                        'type' => 'note',
+                        'name' => $node->name,
+                        'content' => $node->content,
+                        'manage_url' => route('project.nodes.update', $node),
+                    ];
+                }
                 if ($node->isShortcut()) {
                     return [
                         'id' => $node->id,

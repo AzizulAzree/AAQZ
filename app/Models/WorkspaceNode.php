@@ -18,6 +18,7 @@ class WorkspaceNode extends Model
         'name',
         'url',
         'description',
+        'content',
         'sort_order',
     ];
 
@@ -58,5 +59,10 @@ class WorkspaceNode extends Model
     public function isShortcut(): bool
     {
         return $this->type === 'shortcut';
+    }
+
+    public function isNote(): bool
+    {
+        return $this->type === 'note';
     }
 }

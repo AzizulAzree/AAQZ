@@ -61,6 +61,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/bpp/{bpp}/supplier-quotes/{supplierQuote}/select', [BppSupplierQuoteController::class, 'select'])->name('bpp.supplier-quotes.select');
     Route::put('/sticky-note', [StickyNoteController::class, 'update'])->name('sticky-note.update');
     Route::get('/project', [ProjectController::class, 'index'])->name('project.index');
+    Route::get('/project/notes/{workspaceNode}', [ProjectController::class, 'showNote'])->name('project.notes.show');
     Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
     Route::put('/finance/access', [FinanceController::class, 'updateAccess'])->name('finance.access.update');
     Route::post('/finance/records', [FinanceController::class, 'storeRecord'])->name('finance.records.store');
