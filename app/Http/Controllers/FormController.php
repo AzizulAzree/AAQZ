@@ -6,9 +6,12 @@ use App\Models\OrderingSmartForm;
 use App\Models\OrderingSmartFormSubmission;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class FormController extends Controller
@@ -20,27 +23,41 @@ class FormController extends Controller
             ? $user->orderingSmartForm
             : null;
         $submissions = Schema::hasTable('ordering_smart_form_submissions')
-            ? $user->orderingSmartFormSubmissions()->take(20)->get()
-            : collect();
+            ? $user->orderingSmartFormSubmissions()->orderByDesc('id')->paginate(20)
+            : null;
 
         return view('form.index', [
             'shareUrl' => $this->shareUrl($user),
             'formRows' => $this->normalizedRows($savedForm?->fields),
-            'submissions' => $this->submissionTableRows($submissions->all()),
+            'submissions' => $this->submissionTableRows($submissions?->items() ?? []),
+            'submissionPages' => $submissions,
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         if (! Schema::hasTable('ordering_smart_forms')) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Your form could not be saved. Please try again later.'], 503);
+            }
             return redirect()
                 ->route('forms.index')
                 ->with('status', 'form-storage-unavailable');
         }
 
         $validated = $request->validate([
-            'rows' => ['nullable', 'string'],
+            'rows' => ['required', 'json', 'max:200000'],
         ]);
+
+        Validator::make(['fields' => json_decode($validated['rows'], true)], [
+            'fields' => ['present', 'array', 'max:100'],
+            'fields.*' => ['array'],
+            'fields.*.id' => ['required', 'integer', 'min:1', 'distinct'],
+            'fields.*.title' => ['required', 'string', 'max:255'],
+            'fields.*.type' => ['required', Rule::in(['date', 'text', 'money', 'number', 'dropdown', 'radio button', 'checkbox'])],
+            'fields.*.options_text' => ['nullable', 'string', 'max:10000'],
+            'fields.*.required' => ['sometimes', 'boolean'],
+        ])->validate();
 
         $rows = collect(json_decode((string) ($validated['rows'] ?? '[]'), true))
             ->filter(fn ($row) => is_array($row))
@@ -57,6 +74,7 @@ class FormController extends Controller
                 return [
                     'id' => (int) ($row['id'] ?? ($index + 1)),
                     'title' => trim((string) ($row['title'] ?? '')),
+                    'required' => (bool) ($row['required'] ?? false),
                     'type' => in_array($type, $allowedTypes, true) ? $type : 'text',
                     'options_text' => in_array($type, ['dropdown', 'radio button', 'checkbox'], true)
                         ? implode("\n", $optionLines)
@@ -75,6 +93,10 @@ class FormController extends Controller
             ['user_id' => $request->user()->id],
             ['fields' => $rows],
         );
+
+        if ($request->expectsJson()) {
+            return response()->json(['rows' => $rows]);
+        }
 
         return redirect()
             ->route('forms.index')
@@ -120,40 +142,40 @@ class FormController extends Controller
 
         foreach ($formRows as $row) {
             $key = 'answers.'.$row['id'];
+            $presence = $row['required'] ? 'required' : 'nullable';
 
             if ($row['type'] === 'checkbox') {
-                $rules[$key] = ['nullable', 'array'];
-                foreach ($row['options'] as $option) {
-                    // placeholder to keep rule branch aligned
-                }
-                $rules[$key.'.*'] = ['string', 'in:'.implode(',', $row['options'])];
+                $rules[$key] = [$presence, 'array'];
+                if ($row['required']) $rules[$key][] = 'min:1';
+                $rules[$key.'.*'] = ['string', Rule::in($row['options'])];
                 continue;
             }
 
             if ($row['type'] === 'dropdown' || $row['type'] === 'radio button') {
-                $rules[$key] = ['nullable', 'string', 'in:'.implode(',', $row['options'])];
+                $rules[$key] = [$presence, 'string', Rule::in($row['options'])];
                 continue;
             }
 
             if ($row['type'] === 'number') {
-                $rules[$key] = ['nullable', 'integer'];
+                $rules[$key] = [$presence, 'integer'];
                 continue;
             }
 
             if ($row['type'] === 'money') {
-                $rules[$key] = ['nullable', 'numeric'];
+                $rules[$key] = [$presence, 'numeric'];
                 continue;
             }
 
             if ($row['type'] === 'date') {
-                $rules[$key] = ['nullable', 'date'];
+                $rules[$key] = [$presence, 'date'];
                 continue;
             }
 
-            $rules[$key] = ['nullable', 'string'];
+            $rules[$key] = [$presence, 'string'];
         }
 
-        $validated = $request->validate($rules);
+        $attributes = collect($formRows)->mapWithKeys(fn ($row) => ['answers.'.$row['id'] => $row['title']])->all();
+        $validated = $request->validate($rules, [], $attributes);
         $answers = $validated['answers'] ?? [];
 
         $payload = collect($formRows)
@@ -214,6 +236,7 @@ class FormController extends Controller
                 return [
                     'id' => (int) ($row['id'] ?? ($index + 1)),
                     'title' => trim((string) ($row['title'] ?? '')),
+                    'required' => (bool) ($row['required'] ?? false),
                     'type' => $type !== '' ? $type : 'text',
                     'options_text' => in_array($type, ['dropdown', 'radio button', 'checkbox'], true)
                         ? $optionsText
@@ -225,7 +248,7 @@ class FormController extends Controller
 
         if ($rows === []) {
             return [
-                ['id' => 1, 'title' => '', 'type' => 'text', 'options_text' => ''],
+                ['id' => 1, 'title' => '', 'type' => 'text', 'options_text' => '', 'required' => false],
             ];
         }
 
@@ -245,6 +268,7 @@ class FormController extends Controller
                 return [
                     'id' => $row['id'],
                     'title' => $row['title'],
+                    'required' => $row['required'],
                     'type' => $row['type'],
                     'options' => $options,
                 ];
@@ -262,7 +286,7 @@ class FormController extends Controller
                 $customerAnswer = $payload->first(function (array $answer): bool {
                     $title = strtolower(trim((string) ($answer['title'] ?? '')));
 
-                    return str_contains($title, 'customer') || str_contains($title, 'name');
+                    return str_contains($title, 'customer') || str_contains($title, 'name') || str_contains($title, 'nama');
                 });
 
                 $fallbackAnswer = $payload->first(function (array $answer): bool {
@@ -276,14 +300,15 @@ class FormController extends Controller
                 });
 
                 return [
+                    'id' => $submission->id,
                     'customer' => $this->displayAnswerValue($customerAnswer['value'] ?? null)
                         ?: $this->displayAnswerValue($fallbackAnswer['value'] ?? null)
-                        ?: 'Unknown',
+                        ?: 'Response #'.$submission->id,
                     'day_submitted' => $this->relativeSubmissionDay($submission->submitted_at),
                     'submitted_at' => $submission->submitted_at,
                     'submitted_at_display' => $submission->submitted_at?->format('d M Y, h:i A'),
                     'answer_count' => $payload
-                        ->filter(fn (array $answer): bool => trim((string) ($answer['title'] ?? '')) !== '')
+                        ->filter(fn (array $answer): bool => $this->displayAnswerValue($answer['value'] ?? null) !== '')
                         ->count(),
                     'answers' => $payload
                         ->map(fn (array $answer): array => [
@@ -322,8 +347,6 @@ class FormController extends Controller
             return 'Yesterday';
         }
 
-        $days = now()->startOfDay()->diffInDays($submittedAt->copy()->startOfDay());
-
-        return 'Last '.$days.' days';
+        return $submittedAt->diffForHumans();
     }
 }

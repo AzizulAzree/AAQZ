@@ -349,6 +349,10 @@ DB_USERNAME=your_db_user
 DB_PASSWORD=your_db_password
 ```
 
+Saved-account sign-in adds the `saved_logins` table. Run migrations before serving the updated login page. After a password login with **Save account on this device** selected, the browser keeps an encrypted, HttpOnly device cookie for 90 days. The login page offers **Continue as [name]** after sign-out. Each use replaces the device credential and renews its expiry; **Forget this account** revokes it on the server. Password changes invalidate saved cards and previous remember-me cookies. Signing out elsewhere does not revoke a saved card. Clearing browser cookies requires a password login again.
+
+Use HTTPS in production with `SESSION_SECURE_COOKIE=true`, and keep `APP_KEY` stable across deployments and application instances. Do not run `composer setup` on an existing deployment: that first-install script generates a new application key and invalidates existing encrypted cookies.
+
 Then deploy with:
 
 ```bash

@@ -4,10 +4,12 @@ import Alpine from 'alpinejs';
 import projectBrowser from './project-browser';
 import calendarDashboard from './calendar-dashboard';
 import workspaceWidget from './workspace-widget';
+import formsPage from './forms-page';
 
 Alpine.data('projectBrowser', projectBrowser);
 Alpine.data('calendarDashboard', calendarDashboard);
 Alpine.data('workspaceWidget', workspaceWidget);
+Alpine.data('formsPage', formsPage);
 
 window.Alpine = Alpine;
 window.copyTextToClipboard = async (text) => {

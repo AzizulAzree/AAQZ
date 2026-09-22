@@ -1,0 +1,32 @@
+:root { font-family: "Segoe UI", sans-serif; color: #f1f3f8; font-size: 13px; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: transparent; overflow: hidden; }
+body { padding: 4px; }
+button, input { font: inherit; }
+button { border: 0; color: inherit; background: transparent; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid #aac6ff; outline-offset: -2px; }
+button:hover { background: #ffffff12; }
+button:disabled { opacity: .5; cursor: wait; }
+.island { background: #111318; border: 1px solid #ffffff18; border-radius: 26px; overflow: hidden; }
+.toggle { display: flex; align-items: center; justify-content: center; width: 100%; height: 42px; border-radius: 24px; }
+#calendar-panel { height: 464px; padding: 0 16px 16px; overflow-y: auto; border-top: 1px solid #ffffff12; }
+[hidden] { display: none !important; }
+.month-heading { display: flex; align-items: center; justify-content: space-between; margin: 12px 0; }
+h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.month-heading button { width: 30px; height: 30px; font-size: 24px; border-radius: 8px; }
+.weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; }
+.weekdays { color: #969da9; font-size: 11px; margin-bottom: 7px; }
+.days button { position: relative; height: 31px; border-radius: 8px; padding: 0 0 3px; }
+.days .today { color: #b2ccff; outline: 1px solid #7198dc; outline-offset: -1px; }
+.days .selected { background: #324a70; }
+.days .has-events::after { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #aac6ff; position: absolute; bottom: 3px; left: calc(50% - 2px); }
+.status { font-size: 12px; color: #aeb8ca; min-height: 16px; margin: 10px 0; }
+.events { border-top: 1px solid #ffffff16; padding-top: 12px; }
+h3 { font-size: 12px; margin: 0 0 9px; font-weight: 500; color: #aeb8ca; }
+ul { padding-left: 18px; margin: 0; }
+li { margin-bottom: 8px; overflow-wrap: anywhere; }
+li.empty { list-style: none; color: #969da9; margin-left: -18px; }
+.login { padding: 20px 0; }
+.login label { display: block; margin-top: 18px; }
+input { width: 100%; margin-top: 6px; padding: 9px; border: 1px solid #414754; border-radius: 7px; background: #20242c; }
+.login button { width: 100%; padding: 10px; border-radius: 7px; background: #324a70; }

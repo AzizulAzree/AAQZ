@@ -29,6 +29,13 @@ Route::get('/portfolio', [PortfolioController::class, 'redirect'])->name('portfo
 Route::get('/portfolio/{slug}', [PortfolioController::class, 'legacyRedirect'])->name('portfolio.legacy');
 Route::get('/azizulazree', [PortfolioController::class, 'show'])->name('portfolio.show');
 
+// Intentionally use the web middleware: existing sessions and CSRF protection.
+Route::prefix('api/widget')->middleware('throttle:60,1')->group(function () {
+    Route::get('/session', [\App\Http\Controllers\WidgetCalendarController::class, 'session']);
+    Route::post('/login', [\App\Http\Controllers\WidgetCalendarController::class, 'login']);
+    Route::get('/calendar', [\App\Http\Controllers\WidgetCalendarController::class, 'calendar'])->middleware('auth');
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/holidays', [DashboardController::class, 'holidays'])->name('dashboard.holidays');

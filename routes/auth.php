@@ -13,6 +13,12 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
+    Route::post('login/saved', [AuthenticatedSessionController::class, 'continueSaved'])
+        ->middleware('throttle:10,1')->name('login.saved');
+
+    Route::delete('login/saved', [AuthenticatedSessionController::class, 'forgetSaved'])
+        ->name('login.saved.forget');
+
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 
