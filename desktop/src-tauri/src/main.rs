@@ -98,6 +98,8 @@ fn resize_widget(window: tauri::WebviewWindow, expanded: bool) -> Result<(), Str
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let base =
                 std::env::var("API_BASE_URL").unwrap_or_else(|_| DEFAULT_API_BASE_URL.into());

@@ -1,4 +1,4 @@
-# AAQZ calendar widget — first prototype
+# AAQZ calendar widget
 
 Small, read-only Tauri 2 / TypeScript Windows companion. Starts as a 128 × 52 logical-pixel transparent window containing a dark calendar pill. Clicking opens a 336 × 516 panel; clicking again or pressing Escape collapses it. Alt+F4 quits. No tray, startup registration, reminders, editing, polling, local event cache, or database connection.
 
@@ -14,7 +14,15 @@ Windows development requires:
 
 The C++ tools/SDK can require several GB of disk space and administrator approval. Restart the terminal after installation so Cargo is on PATH. Official instructions: <https://v2.tauri.app/start/prerequisites/#windows>.
 
-## Launch
+## Install and open
+
+Download the Windows `AAQZ Calendar_<version>_x64-setup.exe` from the [latest GitHub release](https://github.com/AzizulAzree/AAQZ/releases/latest), run it once, then open **AAQZ Calendar** from the Start menu. It installs for the current Windows user and can install WebView2 if missing. Close any old portable/development copy first. Version 0.1.0 has no updater, so existing prototype users need this one-time manual installation.
+
+Expand the pill to refresh calendar entries and check GitHub for app updates. When a newer version is available, click **Update now** once. The app downloads it, verifies its signature, launches the installer and restarts. No installation starts without that click. Failed checks or downloads leave the calendar usable and offer Retry. A restart requires calendar sign-in again.
+
+There are no timers or background calendar requests. Keeping the panel open does not continuously refresh it; close/reopen or change months for fresh entries. Update checks happen on expansion, not while the pill sits collapsed.
+
+## Development launch
 
 From this directory in PowerShell:
 
@@ -31,7 +39,25 @@ Build a standalone executable without an installer:
 npm run tauri -- build --no-bundle
 ```
 
-Output: `src-tauri/target/release/aaqz-calendar-widget.exe`. End users need WebView2, but not the development toolchain.
+Output: `src-tauri/target/release/aaqz-calendar-widget.exe`. This is useful for development; distribute the installer for reliable in-app updates. End users need WebView2, but not the development toolchain.
+
+## Publish an app update
+
+Updates use Tauri's official updater, HTTPS GitHub downloads, and mandatory signature verification. Update signing is separate from Windows Authenticode signing; Windows can still show an unknown-publisher notice for the initial installer.
+
+The private signing key is **outside the repository** at `%USERPROFILE%\.tauri\aaqz-calendar.key`, with access restricted to the current Windows user. Back it up securely. Never upload it to GitHub, attach it to a release, paste it into a task, or ship it with the app. Keep using the same key for future releases: existing installations trust the public key in `src-tauri/tauri.conf.json`. If publishing from another machine, transfer the key securely or supply `TAURI_SIGNING_PRIVATE_KEY` and (if applicable) `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` through that machine's secret management.
+
+For each new version:
+
+1. Set the same higher version in `package.json`/`package-lock.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`. For example, run `npm version 0.2.1 --no-git-tag-version`, then update the two native files.
+2. Run `npm test`, then **`npm run release`**. This builds with two Cargo jobs, signs the NSIS installer, creates `latest.json`, and verifies that the installer matches the app's public key and that modified bytes are rejected. Never publish if this command fails.
+3. Commit the release source, create tag **`widget-v<version>`** pointing to that commit, and push that tag to `AzizulAzree/AAQZ`.
+4. Create a GitHub Release for that tag. Upload all three files from `desktop/release/widget-v<version>/`: the setup EXE, its `.sig`, and `latest.json`.
+5. Publish it as a normal release and mark it **Latest**. Drafts and prereleases are not offered by the configured endpoint. Keep earlier installers available because their manifests contain version-specific download URLs.
+
+Only app binaries and public metadata belong in release assets. The Laravel server/database is not bundled. Do not mark unrelated Laravel releases as Latest without including the desktop update manifest; this repository's Latest release is the desktop update channel. A future dedicated downloads repository would avoid that constraint.
+
+The release script prepares files but does not silently publish them. Published app versions do not require a Laravel deployment unless the server API itself changes.
 
 ## API and existing Laravel logic
 
@@ -87,3 +113,9 @@ The Playwright tests use installed Microsoft Edge and mock only the native IPC b
 - The live unauthenticated calendar endpoint returns JSON 401. Laravel reports its existing MySQL connection and 110 calendar rows; no records were inserted or changed for the widget.
 - The user confirmed that the native pill opens, real entries appear after sign-in, and it collapses again.
 - The standalone release build passed with `CARGO_BUILD_JOBS=2` after an initial compiler-process failure at the default parallelism. The executable is `src-tauri/target/release/aaqz-calendar-widget.exe`. The running development widget was left open; close it with Alt+F4 before launching another copy.
+
+## Version 0.2.0 verification
+
+- TypeScript checking and the production frontend build passed.
+- All seven Edge/Playwright UI tests passed, covering refresh-on-expand, no polling, explicit update consent, successful install/restart requests, and retry after check/download failures. Native updater calls are mocked in these UI tests.
+- The release command built the NSIS setup EXE and signature, generated the GitHub update manifest, verified the installer using the configured public key, and confirmed tampered installer bytes are rejected.
