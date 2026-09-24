@@ -19,6 +19,8 @@ const bundle = path.join(root, 'src-tauri/target/release/bundle/nsis');
 const installers = (await readdir(bundle)).filter(name => name.endsWith(`_${version}_x64-setup.exe`));
 if (installers.length !== 1) throw new Error('Expected exactly one x64 installer for this version');
 const installer = installers[0];
+// GitHub replaces spaces in uploaded release asset names with dots.
+const assetName = installer.replaceAll(' ', '.');
 const signature = (await readFile(path.join(bundle, `${installer}.sig`), 'utf8')).trim();
 if (!signature) throw new Error('The updater signature is missing');
 const output = path.join(root, 'release', tag);
@@ -32,7 +34,7 @@ await writeFile(path.join(output, 'latest.json'), JSON.stringify({
   platforms: {
     'windows-x86_64': {
       signature,
-      url: `https://github.com/${repository}/releases/download/${tag}/${encodeURIComponent(installer)}`,
+      url: `https://github.com/${repository}/releases/download/${tag}/${encodeURIComponent(assetName)}`,
     },
   },
 }, null, 2) + '\n');
