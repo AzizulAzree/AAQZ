@@ -1,6 +1,6 @@
 # AAQZ calendar widget
 
-Small, read-only Tauri 2 / TypeScript Windows companion. Starts as a 128 × 52 logical-pixel transparent window containing a dark calendar pill. Clicking opens a 336 × 516 panel; clicking again or pressing Escape collapses it. Alt+F4 quits. No tray, startup registration, reminders, editing, polling, local event cache, or database connection.
+Small, read-only Tauri 2 / TypeScript Windows companion. Starts as a 128 × 52 logical-pixel transparent window containing a dark calendar pill. Clicking opens a 336 × 516 panel; clicking again or pressing Escape collapses it. The app appears in the Windows notification tray instead of the taskbar. Left-click its tray icon to show it; right-click for Show widget, Hide widget, or Quit. Alt+F4 also quits. No startup registration, reminders, editing, polling, local event cache, or database connection.
 
 ## Prerequisites notice
 
@@ -18,7 +18,7 @@ The C++ tools/SDK can require several GB of disk space and administrator approva
 
 Download the Windows `AAQZ Calendar_<version>_x64-setup.exe` from the [latest GitHub release](https://github.com/AzizulAzree/AAQZ/releases/latest), run it once, then open **AAQZ Calendar** from the Start menu. It installs for the current Windows user and can install WebView2 if missing. Close any old portable/development copy first. Version 0.1.0 has no updater, so existing prototype users need this one-time manual installation.
 
-Expand the pill to refresh calendar entries and check GitHub for app updates. When a newer version is available, click **Update now** once. The app downloads it, verifies its signature, launches the installer and restarts. No installation starts without that click. Failed checks or downloads leave the calendar usable and offer Retry. A restart requires calendar sign-in again.
+Expand the pill to refresh calendar entries and check GitHub for app updates. When a newer version is available, click **Update now** once. The app downloads it, verifies its signature, launches the installer and restarts. No installation starts without that click. Failed checks or downloads leave the calendar usable and offer Retry. After restart, choose a saved account to sign in with one click.
 
 There are no timers or background calendar requests. Keeping the panel open does not continuously refresh it; close/reopen or change months for fresh entries. Update checks happen on expansion, not while the pill sits collapsed.
 
@@ -31,7 +31,7 @@ npm ci
 npm run tauri -- dev
 ```
 
-The initial pill makes no API request. Open it to fetch the current month. If Laravel returns 401, sign in using an existing AAQZ account. The widget forgets its native in-memory session cookies when it exits. Month navigation also requests that month's data. Every reopening retrieves fresh data; there is no background refresh.
+The initial pill makes no API request. Open it to fetch the current month. If Laravel returns 401, sign in using an existing AAQZ account. Session cookies remain in memory. With Save account on this device checked, a separate revocable login token and account label are stored in Windows Credential Manager, scoped to this API server. Month navigation also requests that month's data. Every reopening retrieves fresh data; there is no background refresh.
 
 Build a standalone executable without an installer:
 
@@ -64,10 +64,10 @@ The release script prepares files but does not silently publish them. Published 
 - Model/table: `App\Models\CalendarEntry` / `calendar_entries`.
 - Existing display: authenticated `/dashboard`, `DashboardController`, `CalendarMonth`, `CalendarEntryCollector`, and `resources/js/calendar-dashboard.js`.
 - Existing calendar is shared across authenticated users; ownership (`source_type = self`, `source_id = users.id`) controls modification. This API preserves the dashboard's visibility, rather than inventing a new per-user scope.
-- `GET /api/widget/calendar?month=YYYY-MM` uses `CalendarMonth` and `CalendarEntryCollector`, returning only `events[].id`, `title`, and `date`. Existing generated follow-up dates remain consistent with the web calendar. No schema changes or event insertion are needed.
-- `GET /api/widget/session` initializes the Laravel session and returns its CSRF token. `POST /api/widget/login` uses the existing `LoginRequest`, password verification, web guard and login lockout, then regenerates the session. It does not create saved-login records or persistent remember cookies.
+- `GET /api/widget/calendar?month=YYYY-MM` uses `CalendarMonth` and `CalendarEntryCollector`, returning only `events[].id`, `title`, and `date`. Existing generated follow-up dates remain consistent with the web calendar. No new schema changes or event insertion are needed; saved accounts reuse the existing saved_logins table.
+- `GET /api/widget/session` initializes the Laravel session and returns its CSRF token. `POST /api/widget/login` uses the existing `LoginRequest`, password verification, web guard and login lockout, then regenerates the session. The save_account option creates a saved-login record; only its token hash and password fingerprint are stored on the server. No persistent session cookies are written.
 - All three routes intentionally live in `routes/web.php`, retaining the session and CSRF middleware. Calendar access requires `auth`; the group is rate limited. Do not move these into a stateless API middleware group without replacing session handling.
-- Rust's HTTP client retains cookies in memory and sends requests only to the configured server. Redirects are disabled. Credentials, tokens and raw server errors are not logged or persisted. The frontend never receives session cookies or database configuration.
+- Rust's HTTP client retains cookies in memory and sends requests only to the configured server. Redirects are disabled. Passwords, session cookies and raw server errors are not logged or persisted. Saved-login tokens are kept only in Windows Credential Manager. The frontend never receives session cookies or database configuration.
 
 ## Server configuration and deployment
 
@@ -119,3 +119,13 @@ The Playwright tests use installed Microsoft Edge and mock only the native IPC b
 - TypeScript checking and the production frontend build passed.
 - All seven Edge/Playwright UI tests passed, covering refresh-on-expand, no polling, explicit update consent, successful install/restart requests, and retry after check/download failures. Native updater calls are mocked in these UI tests.
 - The release command built the NSIS setup EXE and signature, generated the GitHub update manifest, verified the installer using the configured public key, and confirmed tampered installer bytes are rejected.
+
+## Saved accounts and workspace (0.3.0)
+
+- On the first login, leave **Save account on this device** checked. After restart, click the saved name/email card. Up to 10 accounts can be saved per server and Windows user. **Switch account** signs out of the active session and opens the picker; **Use another account** opens the form. **Remove** revokes that saved token and deletes the Windows credential. If offline, local removal still completes and the UI reports that server revocation could not be confirmed.
+- Tokens expire after 90 days and stop working after password changes, server revocation, or account deletion. An expired card prefills only the email and asks for the password again. No password is stored. Signing out retains saved accounts, as the website does. The initial 0.2.x login cannot be recovered; sign in once in 0.3.0 to save it.
+- **Workspace** shows only the signed-in user's existing workspaces, nested folders, shortcut URLs, workspace notes and sticky note. Notes load on demand and render as plain text. Only HTTP(S) shortcuts without embedded credentials can open in the default browser. Browser website sessions remain separate from the widget session.
+- The current tab refreshes when expanded. Calendar month navigation refetches calendar data; selecting Workspace refetches its tree. No polling or disk cache of notes/workspace content. This is a read-only view; edit items in the AAQZ website.
+- Deploy `app/Support/SavedLogin.php`, `app/Http/Controllers/WidgetCalendarController.php` and the widget route additions in `routes/web.php`, then refresh Laravel's route cache. The existing `saved_logins` table, workspace tables and `ProjectController::showNote` must be deployed first. No new migration is introduced.
+- New API: POST `/api/widget/resume`, `/forget`, `/logout`, GET `/workspace`, `/notes/{id}`. Mutations retain CSRF protection; resume is rate limited. Workspace/note reads enforce authentication and ownership.
+- Verification: 20 widget/saved-login Laravel tests, 11 mocked IPC browser tests and two Rust tests (actual Windows credential persistence/removal and shortcut URL validation). Production account selection still requires the user's first sign-in.

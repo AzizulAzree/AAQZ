@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { Calendar } from './Calendar';
+import { Companion } from './Companion';
 import { AppUpdater } from './AppUpdater';
 
 export function mountIsland(root: HTMLElement) {
@@ -7,7 +7,7 @@ export function mountIsland(root: HTMLElement) {
   const toggle = root.querySelector<HTMLButtonElement>('.toggle')!;
   const panel = root.querySelector<HTMLElement>('#calendar-panel')!;
   panel.innerHTML = '<div class="calendar-content"></div><footer class="app-updater" aria-label="App updates"></footer>';
-  const calendar = new Calendar(panel.querySelector<HTMLElement>('.calendar-content')!);
+  const calendar = new Companion(panel.querySelector<HTMLElement>('.calendar-content')!);
   const updater = new AppUpdater(panel.querySelector<HTMLElement>('.app-updater')!);
   let open = false;
   let changing = false;

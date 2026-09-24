@@ -14,7 +14,12 @@ class SavedLogin
 
     public function user(Request $request): ?User
     {
-        $record = $this->record($request);
+        return $this->userForToken($request->cookie(self::COOKIE));
+    }
+
+    public function userForToken(mixed $token): ?User
+    {
+        $record = $this->recordForToken($token);
         if (! $record || now()->greaterThanOrEqualTo($record->expires_at)) {
             return null;
         }
@@ -28,6 +33,18 @@ class SavedLogin
     public function save(Request $request, User $user): void
     {
         $this->forget($request);
+        $value = $this->issue($user);
+
+        // EncryptCookies protects this cookie; only its token hash is stored in the database.
+        Cookie::queue(Cookie::make(
+            self::COOKIE, $value, 90 * 24 * 60,
+            '/', config('session.domain'), config('session.secure') ?? $request->isSecure(),
+            true, false, 'lax',
+        ));
+    }
+
+    public function issue(User $user): string
+    {
         DB::table('saved_logins')->where('expires_at', '<=', now())->delete();
         $id = (string) Str::uuid();
         $token = bin2hex(random_bytes(32));
@@ -39,25 +56,24 @@ class SavedLogin
             'expires_at' => now()->addDays(90),
         ]);
 
-        // EncryptCookies protects this cookie; only its token hash is stored in the database.
-        Cookie::queue(Cookie::make(
-            self::COOKIE, $id.'.'.$token, 90 * 24 * 60,
-            '/', config('session.domain'), config('session.secure') ?? $request->isSecure(),
-            true, false, 'lax',
-        ));
+        return $id.'.'.$token;
     }
 
     public function forget(Request $request): void
     {
-        if ($record = $this->record($request)) {
-            DB::table('saved_logins')->where('id', $record->id)->delete();
-        }
+        $this->forgetToken($request->cookie(self::COOKIE));
         Cookie::queue(Cookie::forget(self::COOKIE, '/', config('session.domain')));
     }
 
-    private function record(Request $request): ?object
+    public function forgetToken(mixed $token): void
     {
-        $value = $request->cookie(self::COOKIE);
+        if ($record = $this->recordForToken($token)) {
+            DB::table('saved_logins')->where('id', $record->id)->delete();
+        }
+    }
+
+    private function recordForToken(mixed $value): ?object
+    {
         if (! is_string($value) || ! preg_match('/^([0-9a-f-]{36})\.([0-9a-f]{64})$/D', $value, $matches)) {
             return null;
         }
