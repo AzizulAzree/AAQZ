@@ -129,3 +129,9 @@ The Playwright tests use installed Microsoft Edge and mock only the native IPC b
 - Deploy `app/Support/SavedLogin.php`, `app/Http/Controllers/WidgetCalendarController.php` and the widget route additions in `routes/web.php`, then refresh Laravel's route cache. The existing `saved_logins` table, workspace tables and `ProjectController::showNote` must be deployed first. No new migration is introduced.
 - New API: POST `/api/widget/resume`, `/forget`, `/logout`, GET `/workspace`, `/notes/{id}`. Mutations retain CSRF protection; resume is rate limited. Workspace/note reads enforce authentication and ownership.
 - Verification: 20 widget/saved-login Laravel tests, 11 mocked IPC browser tests and two Rust tests (actual Windows credential persistence/removal and shortcut URL validation). Production account selection still requires the user's first sign-in.
+## Production deployment on 25 September 2026
+
+- Deployed 0.3.0 through Google Cloud browser SSH to `/var/www/laravel-app`. The server lacked the existing saved-login prerequisite, so only `2026_09_18_020000_create_saved_logins_table.php` was migrated and the SavedLogin service added before the widget deployment. No unrelated migrations were run.
+- The widget deployment preserved unrelated routes, passed PHP syntax checks and rebuilt the route cache. Backup: `/var/backups/aaqz-widget-20260925T094859326972Z` (the SavedLogin service was newly added just before this backup).
+- Live workspace requests without authentication and attempts to resume an invalid saved token both return 401. Authenticated real-account UI verification requires the user's first sign-in in 0.3.0.
+- Installed 0.3.0 locally and published `widget-v0.3.0` as Latest. The publicly downloaded setup matches the local SHA-256, its signature verifies, and modified bytes are rejected.
