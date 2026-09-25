@@ -1,82 +1,23 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use reqwest::{Client, StatusCode, Url};
-use serde::{Deserialize, Serialize};
-use std::time::Duration;
-use tauri::{Manager, PhysicalPosition, PhysicalSize, State};
+use reqwest::Url;
+mod api;
+use api::*;
+
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{Manager, PhysicalPosition, PhysicalSize};
+
+fn show_widget(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
 
 // The only server setting. Override API_BASE_URL before launching for HTTPS/local testing.
 const DEFAULT_API_BASE_URL: &str = "http://35.185.197.15";
-struct Api {
-    client: Client,
-    base: String,
-}
-
-#[derive(Deserialize)]
-struct Session {
-    csrf_token: String,
-}
-#[derive(Deserialize, Serialize)]
-struct CalendarEvent {
-    id: serde_json::Value,
-    title: String,
-    date: String,
-}
-#[derive(Deserialize, Serialize)]
-struct CalendarResponse {
-    events: Vec<CalendarEvent>,
-}
-
-#[tauri::command]
-async fn login(api: State<'_, Api>, email: String, password: String) -> Result<(), String> {
-    let session = api
-        .client
-        .get(format!("{}/api/widget/session", api.base))
-        .send()
-        .await
-        .map_err(|_| "connection")?
-        .error_for_status()
-        .map_err(|_| "connection")?
-        .json::<Session>()
-        .await
-        .map_err(|_| "connection")?;
-    let response = api
-        .client
-        .post(format!("{}/api/widget/login", api.base))
-        .header("X-CSRF-TOKEN", session.csrf_token)
-        .json(&serde_json::json!({ "email": email, "password": password }))
-        .send()
-        .await
-        .map_err(|_| "connection")?;
-    match response.status() {
-        StatusCode::OK => Ok(()),
-        StatusCode::UNPROCESSABLE_ENTITY | StatusCode::TOO_MANY_REQUESTS => {
-            Err("invalid_credentials".into())
-        }
-        _ => Err("connection".into()),
-    }
-}
-
-#[tauri::command]
-async fn calendar(api: State<'_, Api>, month: String) -> Result<CalendarResponse, String> {
-    let response = api
-        .client
-        .get(format!("{}/api/widget/calendar", api.base))
-        .query(&[("month", month)])
-        .send()
-        .await
-        .map_err(|_| "connection")?;
-    if response.status() == StatusCode::UNAUTHORIZED {
-        return Err("unauthenticated".into());
-    }
-    response
-        .error_for_status()
-        .map_err(|_| "connection")?
-        .json()
-        .await
-        .map_err(|_| "connection".into())
-}
-
 fn position(window: &tauri::WebviewWindow, expanded: bool) -> tauri::Result<()> {
     if let Some(monitor) = window.primary_monitor()? {
         let scale = monitor.scale_factor();
@@ -98,6 +39,9 @@ fn resize_widget(window: tauri::WebviewWindow, expanded: bool) -> Result<(), Str
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let base =
                 std::env::var("API_BASE_URL").unwrap_or_else(|_| DEFAULT_API_BASE_URL.into());
@@ -114,25 +58,56 @@ fn main() {
                         .into(),
                 );
             }
-            let mut headers = reqwest::header::HeaderMap::new();
-            headers.insert(reqwest::header::ACCEPT, "application/json".parse()?);
-            app.manage(Api {
-                base: base.trim_end_matches('/').into(),
-                client: Client::builder()
-                    .cookie_store(true)
-                    .default_headers(headers)
-                    .timeout(Duration::from_secs(15))
-                    .redirect(reqwest::redirect::Policy::none())
-                    .build()?,
-            });
+            app.manage(Api::new(base.trim_end_matches('/').into())?);
             let window = app
                 .get_webview_window("main")
                 .ok_or("Main window missing")?;
             position(&window, false)?;
+            let show = MenuItem::with_id(app, "show", "Show widget", true, None::<&str>)?;
+            let hide = MenuItem::with_id(app, "hide", "Hide widget", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show, &hide, &quit])?;
+            TrayIconBuilder::with_id("calendar-tray")
+                .icon(app.default_window_icon().ok_or("App icon missing")?.clone())
+                .tooltip("AAQZ Calendar")
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "show" => show_widget(app),
+                    "hide" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.hide();
+                        }
+                    }
+                    "quit" => app.exit(0),
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        show_widget(tray.app_handle());
+                    }
+                })
+                .build(app)?;
             window.show()?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![calendar, login, resize_widget])
+        .invoke_handler(tauri::generate_handler![
+            calendar,
+            login,
+            resize_widget,
+            account_state,
+            resume_account,
+            switch_account,
+            remove_account,
+            workspace,
+            note,
+            open_shortcut
+        ])
         .run(tauri::generate_context!())
         .expect("Unable to start AAQZ Calendar");
 }

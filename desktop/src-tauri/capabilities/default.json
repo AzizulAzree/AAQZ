@@ -1,1 +1,1 @@
-{ "$schema": "../gen/schemas/desktop-schema.json", "identifier": "main", "description": "Local widget only; no remote webview permissions", "windows": ["main"], "permissions": ["core:default"] }
+{ "$schema": "../gen/schemas/desktop-schema.json", "identifier": "main", "description": "Local widget with signed updates; no remote webview permissions", "windows": ["main"], "permissions": ["core:default", "updater:default", "process:allow-restart"] }

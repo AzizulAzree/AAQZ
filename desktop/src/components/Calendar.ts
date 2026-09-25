@@ -1,4 +1,4 @@
-import { getCalendar, signIn, type CalendarEvent } from '../api/calendar';
+import { getCalendar, type CalendarEvent } from '../api/calendar';
 
 const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
@@ -9,7 +9,7 @@ export class Calendar {
   private request = 0;
   private active = false;
 
-  constructor(private root: HTMLElement) {}
+  constructor(private root: HTMLElement, private onUnauthenticated: () => void) {}
 
   open() { this.active = true; void this.load(); }
   close() { this.active = false; this.request++; this.events = []; this.root.replaceChildren(); }
@@ -25,35 +25,9 @@ export class Calendar {
       this.render();
     } catch (error) {
       if (!this.active || request !== this.request) return;
-      if (error === 'unauthenticated') this.renderLogin();
+      if (error === 'unauthenticated') this.onUnauthenticated();
       else this.render('Unable to connect to server');
     }
-  }
-
-  private renderLogin() {
-    this.root.innerHTML = `<form class="login"><h2>Sign in to your calendar</h2>
-      <label>Email<input name="email" type="email" autocomplete="username" required></label>
-      <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
-      <p class="status" role="status">Use your existing AAQZ account.</p>
-      <button type="submit">Sign in</button></form>`;
-    const form = this.root.querySelector('form')!;
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const data = new FormData(form);
-      const button = form.querySelector('button')!;
-      const status = form.querySelector('.status')!;
-      button.disabled = true;
-      status.textContent = 'Signing in…';
-      try {
-        const signingIn = signIn(String(data.get('email')), String(data.get('password')));
-        (form.elements.namedItem('password') as HTMLInputElement).value = '';
-        await signingIn;
-        if (this.active) await this.load();
-      } catch (error) {
-        status.textContent = error === 'invalid_credentials' ? 'Sign-in failed. Check your details or try again later.' : 'Unable to connect to server';
-        button.disabled = false;
-      }
-    });
   }
 
   private render(message = '') {

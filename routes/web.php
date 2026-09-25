@@ -33,6 +33,11 @@ Route::get('/azizulazree', [PortfolioController::class, 'show'])->name('portfoli
 Route::prefix('api/widget')->middleware('throttle:60,1')->group(function () {
     Route::get('/session', [\App\Http\Controllers\WidgetCalendarController::class, 'session']);
     Route::post('/login', [\App\Http\Controllers\WidgetCalendarController::class, 'login']);
+    Route::post('/resume', [\App\Http\Controllers\WidgetCalendarController::class, 'resume'])->middleware('throttle:10,1');
+    Route::post('/forget', [\App\Http\Controllers\WidgetCalendarController::class, 'forget']);
+    Route::post('/logout', [\App\Http\Controllers\WidgetCalendarController::class, 'logout']);
+    Route::get('/workspace', [\App\Http\Controllers\WidgetCalendarController::class, 'workspace'])->middleware('auth');
+    Route::get('/notes/{workspaceNode}', [ProjectController::class, 'showNote'])->middleware('auth');
     Route::get('/calendar', [\App\Http\Controllers\WidgetCalendarController::class, 'calendar'])->middleware('auth');
 });
 
