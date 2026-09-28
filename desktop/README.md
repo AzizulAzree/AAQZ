@@ -135,3 +135,7 @@ The Playwright tests use installed Microsoft Edge and mock only the native IPC b
 - The widget deployment preserved unrelated routes, passed PHP syntax checks and rebuilt the route cache. Backup: `/var/backups/aaqz-widget-20260925T094859326972Z` (the SavedLogin service was newly added just before this backup).
 - Live workspace requests without authentication and attempts to resume an invalid saved token both return 401. Authenticated real-account UI verification requires the user's first sign-in in 0.3.0.
 - Installed 0.3.0 locally and published `widget-v0.3.0` as Latest. The publicly downloaded setup matches the local SHA-256, its signature verifies, and modified bytes are rejected.
+
+## Separate launcher icons (0.3.1)
+
+The pill now has a calendar icon and a workspace folder icon. Each opens only its own view; clicking the other switches directly, and clicking the active icon or pressing Escape collapses it. The selected view is preserved through sign-in. The inner Calendar/Workspace tabs have been removed. No server deployment is required for this update.

@@ -163,7 +163,7 @@ test('expired saved login prefills email and supports saving opt-out', async ({ 
 
 test('workspace tree loads notes safely and opens shortcuts only on click', async ({ page }) => {
   await page.getByRole('button', { name: 'Open calendar' }).click();
-  await page.getByRole('button', { name: 'Workspace', exact: true }).click();
+  await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
   await expect(page.getByText('<b>Owned</b>', { exact: true })).toBeVisible();
   await page.getByText('Projects', { exact: true }).click();
   expect(await page.evaluate(() => (window as any).calls.some((c: any) => c.command === 'note' || c.command === 'open_shortcut'))).toBe(false);
@@ -173,8 +173,8 @@ test('workspace tree loads notes safely and opens shortcuts only on click', asyn
   await expect(page.locator('.section-content script')).toHaveCount(0);
   await page.getByRole('button', { name: '↗ Docs' }).click();
   expect(await page.evaluate(() => (window as any).calls.find((c: any) => c.command === 'open_shortcut').args.url)).toBe('https://example.com/docs');
-  await page.getByRole('button', { name: 'Collapse calendar' }).click();
-  await page.getByRole('button', { name: 'Open calendar' }).click();
+  await page.getByRole('button', { name: 'Collapse workspace' }).click();
+  await page.getByRole('button', { name: 'Open workspace' }).click();
   await expect(page.getByText('Projects', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => (window as any).calls.filter((c: any) => c.command === 'workspace').length)).toBe(2);
 });
@@ -182,7 +182,7 @@ test('workspace tree loads notes safely and opens shortcuts only on click', asyn
 test('late private note response cannot appear after switching accounts', async ({ page }) => {
   await page.evaluate(() => { (window as any).delayNote = true; });
   await page.getByRole('button', { name: 'Open calendar' }).click();
-  await page.getByRole('button', { name: 'Workspace', exact: true }).click();
+  await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
   await page.getByText('Projects', { exact: true }).click();
   await page.getByText('Note · Brief', { exact: true }).click();
   await expect(page.getByText('Loading note…')).toBeVisible();
@@ -190,4 +190,28 @@ test('late private note response cannot appear after switching accounts', async 
   await page.evaluate(() => (window as any).resolveNote({ name: 'Brief', content: 'Old private note' }));
   await expect(page.getByText('Old private note')).toHaveCount(0);
   await expect(page.getByLabel('Email')).toBeVisible();
+});
+
+test('separate icons open only the selected view and toggle closed', async ({ page }) => {
+  await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
+  await expect(page.getByText('Projects', { exact: true })).toBeVisible();
+  await expect(page.locator('.days')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as any).calls.filter((c: any) => c.command === 'calendar').length)).toBe(0);
+  await page.getByRole('button', { name: 'Open calendar', exact: true }).click();
+  await expect(page.locator('.days')).toBeVisible();
+  await expect(page.getByText('Projects', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.widget-tabs')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Collapse calendar', exact: true }).click();
+  await expect(page.locator('#calendar-panel')).toBeHidden();
+  await page.screenshot({ path: 'test-results/separate-icons.png' });
+});
+
+test('workspace selection survives saved-account sign-in', async ({ page }) => {
+  await page.evaluate(() => { Object.assign(window as any, { account: null, saved: [{ id: 1, name: 'One', email: 'one@example.test' }] }); });
+  await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue as One', exact: false }).click();
+  await expect(page.getByText('Projects', { exact: true })).toBeVisible();
+  await expect(page.locator('.days')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#calendar-panel')).toBeHidden();
 });

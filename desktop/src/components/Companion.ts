@@ -25,7 +25,7 @@ export class Companion {
   private account: Account | null = null;
   private busy = false;
   constructor(private root: HTMLElement) {}
-  open() { this.active = true; void this.loadAccounts(); }
+  open(section: 'calendar' | 'workspace') { this.tab = section; this.active = true; void this.loadAccounts(); }
   close() { this.active = false; this.generation++; this.calendar?.close(); this.root.replaceChildren(); }
   private valid(generation: number) { return this.active && generation === this.generation; }
 
@@ -110,14 +110,9 @@ export class Companion {
   private showContent() {
     this.calendar?.close();
     this.generation++;
-    this.root.innerHTML = '<div class="account-heading"><span></span></div><nav class="widget-tabs" aria-label="Widget sections"></nav><div class="section-content"></div>';
+    this.root.innerHTML = '<div class="account-heading"><span></span></div><div class="section-content"></div>';
     this.root.querySelector('.account-heading span')!.textContent = this.account?.name || 'AAQZ';
     this.root.querySelector('.account-heading')!.append(button('Switch account', () => { void this.switchAccount(); }));
-    const nav = this.root.querySelector('nav')!;
-    for (const [value, label] of [['calendar', 'Calendar'], ['workspace', 'Workspace']] as const) {
-      const control = button(label, () => { this.tab = value; this.showContent(); });
-      control.setAttribute('aria-pressed', String(this.tab === value)); nav.append(control);
-    }
     const content = this.root.querySelector<HTMLElement>('.section-content')!;
     if (this.tab === 'calendar') {
       this.calendar = new Calendar(content, () => { void this.loadAccounts(true); });

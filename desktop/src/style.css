@@ -36,9 +36,6 @@ input { width: 100%; margin-top: 6px; padding: 9px; border: 1px solid #414754; b
 .account-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0; }
 .account-heading span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-heading button { flex-shrink: 0; font-size: 11px; color: #aac6ff; padding: 6px; }
-.widget-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
-.widget-tabs button { flex: 1; padding: 8px; border-radius: 7px; }
-.widget-tabs [aria-pressed="true"] { background: #324a70; }
 .accounts { padding: 16px 0; }
 .account-card { border: 1px solid #414754; border-radius: 9px; margin: 12px 0; overflow: hidden; }
 .account-card button { display: block; width: 100%; padding: 10px; text-align: left; overflow-wrap: anywhere; }
@@ -50,3 +47,7 @@ input { width: 100%; margin-top: 6px; padding: 9px; border: 1px solid #414754; b
 .section-content summary { cursor: pointer; padding: 6px 0; overflow-wrap: anywhere; }
 .note-body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; padding: 8px; background: #20242c; border-radius: 6px; }
 .shortcut { display: block; width: 100%; padding: 8px; text-align: left; color: #aac6ff; overflow-wrap: anywhere; }
+
+.launchers { display: flex; justify-content: center; }
+.launchers .toggle { width: 60px; flex: none; }
+.launchers .toggle[aria-expanded="true"] { color: #aac6ff; background: #324a70; }
