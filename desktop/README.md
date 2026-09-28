@@ -139,3 +139,7 @@ The Playwright tests use installed Microsoft Edge and mock only the native IPC b
 ## Separate launcher icons (0.3.1)
 
 The pill now has a calendar icon and a workspace folder icon. Each opens only its own view; clicking the other switches directly, and clicking the active icon or pressing Escape collapses it. The selected view is preserved through sign-in. The inner Calendar/Workspace tabs have been removed. No server deployment is required for this update.
+
+## Hover reveal (0.3.2)
+
+The collapsed widget rests half-hidden at the top edge of the primary screen. Hover over its visible lower half to slide the icons down; move away to tuck them back. Only 26 logical pixels of native window height are reserved when tucked, so an invisible lower area does not block other apps. An open Calendar or Workspace panel stays fully visible. Keyboard Tab reveals the icons too, and reduced-motion preferences remove the slide animation. Hovering makes no API or update requests.

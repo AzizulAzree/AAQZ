@@ -12,15 +12,53 @@ export function mountIsland(root: HTMLElement) {
   const updater = new AppUpdater(panel.querySelector<HTMLElement>('.app-updater')!);
   let selected: Section | null = null;
   let changing = false;
+  let hovering = false;
+  let keyboardFocus = false;
+  let tuckTimer: ReturnType<typeof setTimeout> | undefined;
+  let layout = Promise.resolve();
+  // Serialize native resizing so rapid pointer movement cannot apply an old size last.
+  const resize = (expanded: boolean, revealed: boolean) => {
+    const next = layout.then(() => invoke<void>('resize_widget', { expanded, revealed }));
+    layout = next.catch(() => {});
+    return next;
+  };
+  const reveal = async () => {
+    clearTimeout(tuckTimer);
+    if (selected || changing) return;
+    try {
+      await resize(false, true);
+      if (!selected && (hovering || keyboardFocus)) root.classList.add('revealed');
+    } catch { toggles.forEach(toggle => toggle.title = 'Unable to reveal widget. Please restart the app.'); }
+  };
+  const tuck = () => {
+    clearTimeout(tuckTimer);
+    if (selected || hovering || keyboardFocus || changing) return;
+    root.classList.remove('revealed');
+    tuckTimer = setTimeout(() => {
+      if (!selected && !hovering && !keyboardFocus && !changing) void resize(false, false).catch(() => {});
+    }, 220);
+  };
+  root.addEventListener('pointerenter', () => { hovering = true; void reveal(); });
+  root.addEventListener('pointerleave', () => { hovering = false; tuck(); });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Tab') { keyboardFocus = true; void reveal(); }
+  });
+  root.addEventListener('pointerdown', () => { keyboardFocus = false; });
+  root.addEventListener('focusout', () => {
+    queueMicrotask(() => { if (!root.contains(document.activeElement)) { keyboardFocus = false; tuck(); } });
+  });
+  window.addEventListener('blur', () => { hovering = false; keyboardFocus = false; tuck(); });
   const select = async (section: Section) => {
     if (changing) return;
     changing = true;
+    clearTimeout(tuckTimer);
     const next = selected === section ? null : section;
     try {
-      if ((selected === null) !== (next === null)) await invoke('resize_widget', { expanded: next !== null });
+      if ((selected === null) !== (next === null)) await resize(next !== null, hovering || keyboardFocus);
       const wasClosed = selected === null;
       selected = next;
       root.classList.toggle('expanded', selected !== null);
+      root.classList.toggle('revealed', selected === null && (hovering || keyboardFocus));
       panel.hidden = selected === null;
       toggles.forEach(toggle => {
         const active = toggle.dataset.section === selected;
@@ -31,7 +69,7 @@ export function mountIsland(root: HTMLElement) {
       if (selected) { companion.open(selected); if (wasClosed) void updater.check(); }
     } catch {
       toggles.forEach(toggle => toggle.title = 'Unable to resize widget. Please restart the app.');
-    } finally { changing = false; }
+    } finally { changing = false; if (!selected && !hovering && !keyboardFocus) tuck(); }
   };
   toggles.forEach(toggle => toggle.addEventListener('click', () => { void select(toggle.dataset.section as Section); }));
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && selected) void select(selected); });

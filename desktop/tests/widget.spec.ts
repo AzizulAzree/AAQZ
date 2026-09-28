@@ -215,3 +215,31 @@ test('workspace selection survives saved-account sign-in', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.locator('#calendar-panel')).toBeHidden();
 });
+
+test('hover reveals half-hidden icons without loading data and tucks on leave', async ({ page }) => {
+  await page.setViewportSize({ width: 128, height: 80 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(page.locator('.island')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, -26)');
+  await page.screenshot({ path: 'test-results/tucked-widget.png' });
+  await page.mouse.move(64, 12);
+  await expect(page.locator('#app')).toHaveClass('revealed');
+  await expect(page.locator('.island')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 8)');
+  await page.screenshot({ path: 'test-results/revealed-widget.png' });
+  expect(await page.evaluate(() => (window as any).calls.every((c: any) => c.command === 'resize_widget'))).toBe(true);
+  await page.mouse.move(127, 79);
+  await page.clock.fastForward(250);
+  await expect(page.locator('#app')).not.toHaveClass(/revealed/);
+  expect(await page.evaluate(() => (window as any).calls.at(-1).args)).toEqual({ expanded: false, revealed: false });
+});
+
+test('open view stays visible when pointer leaves and keyboard can reveal icons', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#app')).toHaveClass('revealed');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#calendar-panel')).toBeVisible();
+  await page.mouse.move(335, 515);
+  await page.clock.fastForward(500);
+  await expect(page.locator('#app')).toHaveClass('expanded');
+  await expect(page.locator('.island')).toHaveCSS('transform', 'none');
+});

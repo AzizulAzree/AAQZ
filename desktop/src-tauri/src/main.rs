@@ -18,23 +18,35 @@ fn show_widget(app: &tauri::AppHandle) {
 
 // The only server setting. Override API_BASE_URL before launching for HTTPS/local testing.
 const DEFAULT_API_BASE_URL: &str = "http://35.185.197.15";
-fn position(window: &tauri::WebviewWindow, expanded: bool) -> tauri::Result<()> {
+fn position(window: &tauri::WebviewWindow, expanded: bool, revealed: bool) -> tauri::Result<()> {
     if let Some(monitor) = window.primary_monitor()? {
         let scale = monitor.scale_factor();
         let width = ((if expanded { 336.0 } else { 128.0 }) * scale).round() as u32;
-        let height = ((if expanded { 516.0 } else { 52.0 }) * scale).round() as u32;
+        let height = ((if expanded {
+            516.0
+        } else if revealed {
+            60.0
+        } else {
+            26.0
+        }) * scale)
+            .round() as u32;
         window.set_size(PhysicalSize::new(width, height))?;
         window.set_position(PhysicalPosition::new(
             monitor.position().x + (monitor.size().width as i32 - width as i32) / 2,
-            monitor.position().y + (8.0 * scale).round() as i32,
+            monitor.position().y + (if expanded { 8.0 * scale } else { 0.0 }).round() as i32,
         ))?;
     }
     Ok(())
 }
 
 #[tauri::command]
-fn resize_widget(window: tauri::WebviewWindow, expanded: bool) -> Result<(), String> {
-    position(&window, expanded).map_err(|_| "Unable to resize widget".into())
+fn resize_widget(
+    window: tauri::WebviewWindow,
+    expanded: bool,
+    revealed: Option<bool>,
+) -> Result<(), String> {
+    position(&window, expanded, revealed.unwrap_or(false))
+        .map_err(|_| "Unable to resize widget".into())
 }
 
 fn main() {
@@ -62,7 +74,7 @@ fn main() {
             let window = app
                 .get_webview_window("main")
                 .ok_or("Main window missing")?;
-            position(&window, false)?;
+            position(&window, false, false)?;
             let show = MenuItem::with_id(app, "show", "Show widget", true, None::<&str>)?;
             let hide = MenuItem::with_id(app, "hide", "Hide widget", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
