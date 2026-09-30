@@ -81,3 +81,19 @@ input { width: 100%; margin-top: 6px; padding: 9px; border: 1px solid #414754; b
 .workspace-empty { color: #969da9; font-size: 12px; line-height: 1.6; }
 .workspace-browser .note-body { margin-top: 12px; padding: 12px; }
 .note-body button { display: block; margin-top: 12px; padding: 7px 9px; color: #aac6ff; background: #324a70; border-radius: 6px; }
+
+.my-notes h2 { margin: 16px 0; }
+.sticky-note-paper { overflow: hidden; border: 1px solid #e5d18c; border-radius: 14px; background: linear-gradient(155deg, #fff2ba, #fce68a); color: #5d512d; }
+.sticky-note-kicker { margin: 0; padding: 12px 14px; border-bottom: 1px solid #8b74301f; font-size: 11px; font-weight: 600; color: #65582e; }
+.sticky-note-content { min-height: 192px; padding: 14px; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; white-space: pre-wrap; }
+.sticky-note-content:focus-visible { outline: 2px solid #9b874b; outline-offset: -2px; }
+.sticky-note-content p { margin: 0 0 8px; }
+.sticky-note-content ul, .sticky-note-content ol { padding-left: 22px; margin: 8px 0; }
+.sticky-note-content ul { list-style: disc; }
+.sticky-note-content ol { list-style: decimal; }
+.sticky-note-content li { margin-bottom: 4px; }
+.sticky-note-content b, .sticky-note-content strong, .note-format-bold { font-weight: 700; }
+.sticky-note-content i, .sticky-note-content em, .note-format-italic { font-style: italic; }
+.sticky-note-content s, .sticky-note-content strike, .sticky-note-content del, .note-format-strike { text-decoration-line: line-through; }
+.sticky-note-content u, .note-format-underline { text-decoration-line: underline; }
+.note-format-strike.note-format-underline { text-decoration-line: underline line-through; }

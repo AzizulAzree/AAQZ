@@ -22,7 +22,7 @@ const DEFAULT_API_BASE_URL: &str = "http://35.185.197.15";
 fn position(window: &tauri::WebviewWindow, expanded: bool, revealed: bool) -> tauri::Result<()> {
     if let Some(monitor) = window.primary_monitor()? {
         let scale = monitor.scale_factor();
-        let width = ((if expanded { 336.0 } else { 128.0 }) * scale).round() as u32;
+        let width = ((if expanded { 336.0 } else { 188.0 }) * scale).round() as u32;
         let height = ((if expanded {
             516.0
         } else if revealed {

@@ -151,3 +151,7 @@ Open either panel, click the **gear icon** to the right of the update notice, an
 ### Workspace icon navigation (0.3.5)
 
 Workspace uses a grid of labelled folder, link and note icons. Open a folder to see its immediate contents, and use breadcrumbs to return to a parent or All workspaces. Notes open in a read-only view with a Back button; My notes opens your personal sticky note. Links open in your default browser. Folder navigation uses the data fetched when Workspace opens; notes load on demand.
+
+### My notes (0.3.6)
+
+The third launcher icon opens My notes, a dedicated view of your Laravel sticky note. It preserves bold, italic, strikethrough, underline, paragraphs, line breaks, bullet lists and numbered lists, with the web sticky note paper colours. Editor span styles are converted to local text-formatting classes; other markup and attributes are removed. My notes is read-only and refreshes when opened, with no background polling. The sticky note tile has been removed from Workspace.

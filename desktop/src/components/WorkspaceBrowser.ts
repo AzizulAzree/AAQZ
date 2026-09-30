@@ -35,16 +35,12 @@ export class WorkspaceBrowser {
 
   private home(focus = false) {
     this.reset('Workspace', focus);
-    if (this.data.sticky_note) {
-      const grid = this.grid(this.root);
-      grid.append(this.tile('My notes', 'note', () => this.reader('My notes', this.data.sticky_note!, () => this.home(true))));
-    }
     for (const workspace of this.data.workspaces) {
       const section = document.createElement('section');
       const title = document.createElement('h3'); title.textContent = workspace.name; section.append(title);
       this.items(section, workspace, []); this.root.append(section);
     }
-    if (!this.data.workspaces.length && !this.data.sticky_note) this.notice('No workspace items yet. Add them in AAQZ.');
+    if (!this.data.workspaces.length) this.notice('No workspace items yet. Add them in AAQZ.');
   }
 
   private grid(parent: HTMLElement) {

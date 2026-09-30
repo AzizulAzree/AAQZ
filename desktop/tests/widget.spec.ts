@@ -32,6 +32,7 @@ test.beforeEach(async ({ page }) => {
         if (state.resumeExpired) throw 'unauthenticated';
         state.account = state.saved.find((a: any) => a.id === args.id); state.mode = 'success'; return state.account;
       }
+      if (command === 'workspace' && state.workspaceFails) throw 'connection';
       if (command === 'workspace') return state.workspaceData ?? { workspaces: [{ id: 1, name: '<b>Owned</b>', nodes: [
         { id: 10, parent_id: null, name: 'Projects', type: 'folder' },
         { id: 11, parent_id: 10, name: 'Brief', type: 'note' },
@@ -221,7 +222,7 @@ test('workspace selection survives saved-account sign-in', async ({ page }) => {
 });
 
 test('hover reveals half-hidden icons without loading data and tucks on leave', async ({ page }) => {
-  await page.setViewportSize({ width: 128, height: 80 });
+  await page.setViewportSize({ width: 188, height: 80 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('.island')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, -26)');
   await page.screenshot({ path: 'test-results/tucked-widget.png' });
@@ -319,12 +320,10 @@ test('gear opens settings beside updater and Escape closes settings first', asyn
 });
 
 
-test('workspace uses flat icon grids, breadcrumbs and a personal note tile', async ({ page }) => {
+test('workspace uses flat icon grids and breadcrumbs without a sticky note tile', async ({ page }) => {
   await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
   await expect(page.locator('.workspace-browser details')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Read note My notes', exact: true }).click();
-  await expect(page.getByText('Remember this', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '← Back', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Read note My notes', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Open folder Projects', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Read note Brief', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open link Docs', exact: true })).toBeVisible();
@@ -369,4 +368,66 @@ test('leaving a loading note suppresses its response and failed notes can retry'
   await page.evaluate(() => { (window as any).noteFails = false; });
   await page.getByRole('button', { name: 'Retry note', exact: true }).click();
   await expect(page.getByText('<script>private note</script>', { exact: true })).toBeVisible();
+});
+
+
+test('My notes has its own icon, preserves web formatting and refreshes on open', async ({ page }) => {
+  await page.evaluate(() => { (window as any).workspaceData = { workspaces: [], sticky_note: '<div><b>Priority</b></div><div><i>Call tomorrow</i></div><div><strike>Finished task</strike></div><ul><li>Buy milk</li><li>Send invoice</li></ul><ol><li>First step</li><li>Next step</li></ol>' }; });
+  await page.getByRole('button', { name: 'Open My notes', exact: true }).click();
+  const note = page.getByRole('region', { name: 'Sticky note content' });
+  await expect(page.getByRole('heading', { name: 'My notes', exact: true })).toBeVisible();
+  await expect(note.locator('b')).toHaveCSS('font-weight', '700');
+  await expect(note.locator('i')).toHaveCSS('font-style', 'italic');
+  await expect(note.locator('strike')).toHaveCSS('text-decoration-line', 'line-through');
+  await expect(note.locator('ul li')).toHaveCount(2);
+  await expect(note.locator('ol li')).toHaveCount(2);
+  await expect(page.locator('.workspace-grid')).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/my-notes.png' });
+  await page.clock.fastForward('10:00');
+  expect(await page.evaluate(() => (window as any).calls.filter((c: any) => c.command === 'workspace').length)).toBe(1);
+  expect(await page.evaluate(() => (window as any).calls.some((c: any) => c.command === 'calendar' || c.command === 'note'))).toBe(false);
+  await page.getByRole('button', { name: 'Collapse My notes', exact: true }).click();
+  await page.evaluate(() => { (window as any).workspaceData.sticky_note = '<strong>Changed on the web</strong>'; });
+  await page.getByRole('button', { name: 'Open My notes', exact: true }).click();
+  await expect(note.locator('strong')).toHaveText('Changed on the web');
+  expect(await page.evaluate(() => (window as any).calls.filter((c: any) => c.command === 'workspace').length)).toBe(2);
+});
+
+test('sticky note strips unsafe HTML and preserves text-only inline styles', async ({ page }) => {
+  await page.evaluate(() => { (window as any).workspaceData = { workspaces: [], sticky_note: '<p onclick="alert(1)"><span style="font-weight:700;font-style:italic;text-decoration:line-through;background-image:url(https://example.com/evil)">Styled text</span></p><script>bad script</script><img src="https://example.com/image" onerror="alert(1)"><iframe src="https://example.com"></iframe><svg onload="alert(1)"></svg><a href="javascript:alert(1)">Link text</a><input autofocus>' }; });
+  await page.getByRole('button', { name: 'Open My notes', exact: true }).click();
+  const note = page.getByRole('region', { name: 'Sticky note content' });
+  const styled = note.getByText('Styled text', { exact: true });
+  await expect(styled).toHaveCSS('font-weight', '700');
+  await expect(styled).toHaveCSS('font-style', 'italic');
+  await expect(styled).toHaveCSS('text-decoration-line', 'line-through');
+  await expect(note.locator('script,img,iframe,svg,a,input,[style],[onclick],[onerror],[src],[href]')).toHaveCount(0);
+  await expect(note.getByText('Link text')).toBeVisible();
+  await expect(note.getByText('bad script')).toHaveCount(0);
+});
+
+test('sticky note supports plain text, empty content and retry after a failed load', async ({ page }) => {
+  await page.evaluate(() => { (window as any).workspaceData = { workspaces: [], sticky_note: 'First line\nSecond line < 3 & 4 > 2' }; (window as any).workspaceFails = true; });
+  await page.getByRole('button', { name: 'Open My notes', exact: true }).click();
+  await page.getByRole('button', { name: 'Retry sticky note', exact: true }).waitFor();
+  await page.evaluate(() => { (window as any).workspaceFails = false; });
+  await page.getByRole('button', { name: 'Retry sticky note', exact: true }).click();
+  const note = page.getByRole('region', { name: 'Sticky note content' });
+  await expect(note).toHaveText('First line\nSecond line < 3 & 4 > 2');
+  await expect(note).toHaveCSS('white-space', 'pre-wrap');
+  await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
+  await expect(note).toHaveCount(0);
+  await page.evaluate(() => { (window as any).workspaceData.sticky_note = '<div><br></div>'; });
+  await page.getByRole('button', { name: 'Open My notes', exact: true }).click();
+  await expect(note).toHaveText('Your sticky note is empty. Add a note in AAQZ.');
+});
+
+test('saved account sign-in preserves My notes selection and switch clears content', async ({ page }) => {
+  await page.evaluate(() => { Object.assign(window as any, { account: null, saved: [{ id: 1, name: 'One', email: 'one@example.test' }] }); });
+  await page.getByRole('button', { name: 'Open My notes', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue as One', exact: false }).click();
+  await expect(page.getByRole('region', { name: 'Sticky note content' })).toHaveText('Remember this');
+  await expect(page.locator('.workspace-grid,.days')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Switch account', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Sticky note content' })).toHaveCount(0);
 });

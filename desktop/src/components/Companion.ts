@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { Calendar } from './Calendar';
 import { WorkspaceBrowser, type WorkspaceData } from './WorkspaceBrowser';
+import { mountStickyNote } from './StickyNote';
 
 interface Account { id: number; name: string; email: string }
 interface AccountState { account: Account | null; saved: Account[] }
@@ -19,11 +20,11 @@ export class Companion {
   private active = false;
   private generation = 0;
   private calendar?: Calendar;
-  private tab: 'calendar' | 'workspace' = 'calendar';
+  private tab: 'calendar' | 'workspace' | 'notes' = 'calendar';
   private account: Account | null = null;
   private busy = false;
   constructor(private root: HTMLElement) {}
-  open(section: 'calendar' | 'workspace') { this.tab = section; this.active = true; void this.loadAccounts(); }
+  open(section: 'calendar' | 'workspace' | 'notes') { this.tab = section; this.active = true; void this.loadAccounts(); }
   close() { this.active = false; this.generation++; this.calendar?.close(); this.root.replaceChildren(); }
   private valid(generation: number) { return this.active && generation === this.generation; }
 
@@ -132,16 +133,17 @@ export class Companion {
 
   private async loadWorkspace(content: HTMLElement) {
     const generation = this.generation;
-    content.textContent = 'Loading workspace…';
+    content.textContent = this.tab === 'notes' ? 'Loading sticky note…' : 'Loading workspace…';
     try {
       const data = await invoke<WorkspaceData>('workspace');
       if (!this.valid(generation)) return;
-      new WorkspaceBrowser(content, data, () => this.valid(generation), () => { void this.loadAccounts(true); });
+      if (this.tab === 'notes') mountStickyNote(content, data.sticky_note);
+      else new WorkspaceBrowser(content, data, () => this.valid(generation), () => { void this.loadAccounts(true); });
     } catch (error) {
       if (!this.valid(generation)) return;
       if (error === 'unauthenticated') { void this.loadAccounts(true); return; }
       content.textContent = message(error);
-      content.append(button('Retry workspace', () => { void this.loadWorkspace(content); }));
+      content.append(button(this.tab === 'notes' ? 'Retry sticky note' : 'Retry workspace', () => { void this.loadWorkspace(content); }));
     }
   }
 
