@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Companion } from './Companion';
 import { StartupSetting } from './StartupSetting';
 import { AppUpdater } from './AppUpdater';
+import { mountAppearance } from './AppearanceSetting';
 
 type Section = 'calendar' | 'workspace' | 'notes';
 export function mountIsland(root: HTMLElement) {
@@ -9,10 +10,11 @@ export function mountIsland(root: HTMLElement) {
   const toggles = root.querySelectorAll<HTMLButtonElement>('.toggle');
   const island = root.querySelector<HTMLElement>('.island')!;
   const panel = root.querySelector<HTMLElement>('#calendar-panel')!;
-  panel.innerHTML = `<div class="calendar-content"></div><section id="widget-settings" class="startup-setting" aria-label="Widget settings" hidden><h3>Settings</h3></section><footer class="widget-footer"><div class="app-updater" aria-label="App updates"></div><button type="button" class="settings-toggle" title="Settings" aria-label="Open settings" aria-expanded="false" aria-controls="widget-settings"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m9.5 3-.5 2a7.5 7.5 0 0 0-2 1.2L5 5.7 2.5 10l1.5 1.5a7.5 7.5 0 0 0 0 2L2.5 15 5 19.3l2-.5A7.5 7.5 0 0 0 9 20l.5 2h5l.5-2a7.5 7.5 0 0 0 2-1.2l2 .5 2.5-4.3-1.5-1.5a7.5 7.5 0 0 0 0-2L21.5 10 19 5.7l-2 .5A7.5 7.5 0 0 0 15 5l-.5-2Z"/><circle cx="12" cy="12.5" r="3"/></svg></button></footer>`;
+  panel.innerHTML = `<div class="calendar-content"></div><section id="widget-settings" class="startup-setting" aria-label="Widget settings" hidden><h3>Settings</h3><div class="appearance-container"></div><div class="startup-container"></div></section><footer class="widget-footer"><div class="app-updater" aria-label="App updates"></div><button type="button" class="settings-toggle" title="Settings" aria-label="Open settings" aria-expanded="false" aria-controls="widget-settings"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m9.5 3-.5 2a7.5 7.5 0 0 0-2 1.2L5 5.7 2.5 10l1.5 1.5a7.5 7.5 0 0 0 0 2L2.5 15 5 19.3l2-.5A7.5 7.5 0 0 0 9 20l.5 2h5l.5-2a7.5 7.5 0 0 0 2-1.2l2 .5 2.5-4.3-1.5-1.5a7.5 7.5 0 0 0 0-2L21.5 10 19 5.7l-2 .5A7.5 7.5 0 0 0 15 5l-.5-2Z"/><circle cx="12" cy="12.5" r="3"/></svg></button></footer>`;
   const companion = new Companion(panel.querySelector<HTMLElement>('.calendar-content')!);
   const updater = new AppUpdater(panel.querySelector<HTMLElement>('.app-updater')!);
-  const startup = new StartupSetting(panel.querySelector<HTMLElement>('.startup-setting')!);
+  const startup = new StartupSetting(panel.querySelector<HTMLElement>('.startup-container')!);
+  mountAppearance(panel.querySelector<HTMLElement>('.appearance-container')!);
   const settings = panel.querySelector<HTMLElement>('#widget-settings')!;
   const settingsToggle = panel.querySelector<HTMLButtonElement>('.settings-toggle')!;
   const closeSettings = () => {

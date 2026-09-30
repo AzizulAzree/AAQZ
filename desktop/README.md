@@ -159,3 +159,7 @@ The third launcher icon opens My notes, a dedicated view of your Laravel sticky 
 ### Dismiss on outside click (0.3.7)
 
 Click outside the widget or switch to another app to collapse the open view and settings to the half-hidden launcher. Moving the pointer away alone keeps an open view visible. Hover and click an icon to reopen. Dismissal during a resize waits for that transition to finish.
+
+### Glass appearance (0.4.0)
+
+All widget views use translucent glass surfaces with light and dark palettes. Open the gear menu and choose System, Light or Dark under Appearance. The choice is saved locally on this device. System follows Windows appearance changes. Glass is rendered in the webview with CSS transparency, highlights and backdrop filtering; it does not enable native Windows desktop acrylic blur. No additional runtime dependency is required.

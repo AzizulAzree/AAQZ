@@ -7,7 +7,7 @@ export class StartupSetting {
   private enabled = false;
 
   constructor(root: HTMLElement) {
-    root.innerHTML = '<h3>Settings</h3><label title="Open the widget automatically when you sign in to Windows"><input type="checkbox" disabled> Start with Windows</label><span role="status"></span>';
+    root.innerHTML = '<label title="Open the widget automatically when you sign in to Windows"><input type="checkbox" disabled> Start with Windows</label><span role="status"></span>';
     this.checkbox = root.querySelector('input')!;
     this.status = root.querySelector('span')!;
     this.checkbox.addEventListener('change', () => { void this.change(); });

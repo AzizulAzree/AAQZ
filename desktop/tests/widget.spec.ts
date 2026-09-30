@@ -473,3 +473,41 @@ test('outside focus loss during opening is applied after the resize finishes', a
   await expect(page.locator('#app')).not.toHaveClass(/expanded|revealed/);
   expect(await page.evaluate(() => (window as any).calls.filter((c: any) => c.command === 'resize_widget').at(-1).args)).toEqual({ expanded: false, revealed: false });
 });
+
+
+test('appearance follows system and preserves an explicit choice across reopening and restart', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByRole('button', { name: 'Open calendar', exact: true }).click();
+  await page.getByRole('button', { name: 'Open settings', exact: true }).click();
+  await expect(page.getByRole('radio', { name: 'System', exact: true })).toBeChecked();
+  await page.getByRole('radio', { name: 'Dark', exact: true }).check();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.screenshot({ path: 'test-results/glass-dark-settings.png' });
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.getByRole('button', { name: 'Open calendar', exact: true }).click();
+  await page.getByRole('button', { name: 'Open settings', exact: true }).click();
+  await expect(page.getByRole('radio', { name: 'Dark', exact: true })).toBeChecked();
+  await page.getByRole('radio', { name: 'Light', exact: true }).check();
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.screenshot({ path: 'test-results/glass-light-settings.png' });
+  await page.getByRole('radio', { name: 'System', exact: true }).check();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+});
+
+test('glass appearance covers workspace and formatted notes in both themes', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
+  await expect(page.locator('.workspace-tile')).toBeVisible();
+  await page.screenshot({ path: 'test-results/glass-light-workspace.png' });
+  await page.getByRole('button', { name: 'Open My notes', exact: true }).click();
+  await expect(page.locator('.sticky-note-content')).toContainText('Remember this');
+  await page.screenshot({ path: 'test-results/glass-light-notes.png' });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.screenshot({ path: 'test-results/glass-dark-notes.png' });
+});
