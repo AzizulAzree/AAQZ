@@ -55,3 +55,8 @@ input { width: 100%; margin-top: 6px; padding: 9px; border: 1px solid #414754; b
 .launchers { display: flex; justify-content: center; }
 .launchers .toggle { width: 60px; flex: none; }
 .launchers .toggle[aria-expanded="true"] { color: #aac6ff; background: #324a70; }
+
+.startup-setting { flex: none; padding: 8px 16px; border-top: 1px solid #ffffff16; font-size: 11px; color: #aeb8ca; }
+.startup-setting label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.startup-setting input { width: auto; margin: 0; accent-color: #aac6ff; }
+.startup-setting [role="status"]:not(:empty) { display: block; margin-top: 6px; }

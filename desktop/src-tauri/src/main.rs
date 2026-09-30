@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use reqwest::Url;
+use tauri_plugin_autostart::ManagerExt;
 mod api;
 use api::*;
 
@@ -49,10 +50,24 @@ fn resize_widget(
         .map_err(|_| "Unable to resize widget".into())
 }
 
+#[tauri::command]
+fn autostart_status(app: tauri::AppHandle) -> Result<bool, String> {
+    app.autolaunch().is_enabled().map_err(|_| "Unable to read Windows startup setting".into())
+}
+
+#[tauri::command]
+fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<bool, String> {
+    let manager = app.autolaunch();
+    if enabled { manager.enable() } else { manager.disable() }
+        .map_err(|_| "Unable to change Windows startup setting".to_string())?;
+    manager.is_enabled().map_err(|_| "Unable to verify Windows startup setting".into())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let base =
@@ -109,6 +124,8 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            autostart_status,
+            set_autostart,
             calendar,
             login,
             resize_widget,

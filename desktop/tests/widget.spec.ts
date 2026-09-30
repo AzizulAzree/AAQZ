@@ -23,6 +23,8 @@ test.beforeEach(async ({ page }) => {
         args.onEvent.onmessage({ event: 'Finished' });
         return;
       }
+      if (command === 'autostart_status') { if (state.startupReadFails) throw 'read'; return state.startupEnabled ?? false; }
+      if (command === 'set_autostart') { if (state.startupFails) throw 'write'; state.startupEnabled = args.enabled; return state.startupEnabled; }
       if (command === 'account_state') return { account: state.account, saved: state.saved };
       if (command === 'switch_account') { state.account = null; return; }
       if (command === 'remove_account') { state.saved = state.saved.filter((a: any) => a.id !== args.id); return true; }
@@ -242,4 +244,41 @@ test('open view stays visible when pointer leaves and keyboard can reveal icons'
   await page.clock.fastForward(500);
   await expect(page.locator('#app')).toHaveClass('expanded');
   await expect(page.locator('.island')).toHaveCSS('transform', 'none');
+});
+
+
+test('startup is opt-in and remembers the Windows setting across panels', async ({ page }) => {
+  await page.getByRole('button', { name: 'Open calendar' }).click();
+  const toggle = page.getByRole('checkbox', { name: 'Start with Windows' });
+  await expect(toggle).not.toBeChecked();
+  expect(await page.evaluate(() => (window as any).calls.some((c: any) => c.command === 'set_autostart'))).toBe(false);
+  await toggle.check();
+  await page.getByRole('button', { name: 'Collapse calendar' }).click();
+  await page.getByRole('button', { name: 'Open workspace' }).click();
+  await expect(toggle).toBeChecked();
+  await toggle.uncheck();
+  expect(await page.evaluate(() => (window as any).startupEnabled)).toBe(false);
+});
+
+test('startup failures restore the checkbox and allow retry', async ({ page }) => {
+  await page.evaluate(() => { (window as any).startupEnabled = true; (window as any).startupFails = true; });
+  await page.getByRole('button', { name: 'Open calendar' }).click();
+  const toggle = page.getByRole('checkbox', { name: 'Start with Windows' });
+  await expect(toggle).toBeChecked();
+  await toggle.click();
+  await expect(toggle).toBeChecked();
+  await expect(page.getByText('Could not save. Please try again.')).toBeVisible();
+  await page.evaluate(() => { (window as any).startupFails = false; });
+  await toggle.uncheck();
+  await expect(toggle).not.toBeChecked();
+});
+
+test('startup read failure prevents overwriting an unknown setting', async ({ page }) => {
+  await page.evaluate(() => { (window as any).startupReadFails = true; });
+  await page.getByRole('button', { name: 'Open calendar' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Start with Windows' })).toBeDisabled();
+  await page.evaluate(() => { (window as any).startupReadFails = false; (window as any).startupEnabled = true; });
+  await page.getByRole('button', { name: 'Collapse calendar' }).click();
+  await page.getByRole('button', { name: 'Open calendar' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Start with Windows' })).toBeChecked();
 });

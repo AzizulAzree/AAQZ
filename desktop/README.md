@@ -143,3 +143,7 @@ The pill now has a calendar icon and a workspace folder icon. Each opens only it
 ## Hover reveal (0.3.2)
 
 The collapsed widget rests half-hidden at the top edge of the primary screen. Hover over its visible lower half to slide the icons down; move away to tuck them back. Only 26 logical pixels of native window height are reserved when tucked, so an invisible lower area does not block other apps. An open Calendar or Workspace panel stays fully visible. Keyboard Tab reveals the icons too, and reduced-motion preferences remove the slide animation. Hovering makes no API or update requests.
+
+### Start with Windows
+
+Open either panel and enable **Start with Windows** at the bottom. It is off by default. The setting registers the installed widget for the current Windows user at sign-in, starts collapsed, and needs no administrator access. Disable the same checkbox to stop automatic startup. This device setting is independent of your AAQZ account.
