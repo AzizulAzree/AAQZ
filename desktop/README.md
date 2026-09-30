@@ -147,3 +147,7 @@ The collapsed widget rests half-hidden at the top edge of the primary screen. Ho
 ### Start with Windows
 
 Open either panel, click the **gear icon** to the right of the update notice, and enable **Start with Windows** in Settings. It is off by default. The setting registers the installed widget for the current Windows user at sign-in, starts collapsed, and needs no administrator access. Disable the same checkbox to stop automatic startup. This device setting is independent of your AAQZ account.
+
+### Workspace icon navigation (0.3.5)
+
+Workspace uses a grid of labelled folder, link and note icons. Open a folder to see its immediate contents, and use breadcrumbs to return to a parent or All workspaces. Notes open in a read-only view with a Back button; My notes opens your personal sticky note. Links open in your default browser. Folder navigation uses the data fetched when Workspace opens; notes load on demand.

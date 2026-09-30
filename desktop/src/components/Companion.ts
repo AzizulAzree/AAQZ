@@ -1,11 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
 import { Calendar } from './Calendar';
+import { WorkspaceBrowser, type WorkspaceData } from './WorkspaceBrowser';
 
 interface Account { id: number; name: string; email: string }
 interface AccountState { account: Account | null; saved: Account[] }
-interface Node { id: number; parent_id: number | null; type: 'folder' | 'note' | 'shortcut'; name: string; url: string | null }
-interface Workspace { id: number; name: string; nodes: Node[] }
-interface WorkspaceData { workspaces: Workspace[]; sticky_note: string | null }
 const message = (error: unknown) => error === 'unauthenticated' ? 'This saved login expired. Enter your password to sign in again.'
   : error === 'invalid_credentials' ? 'Sign-in failed. Check your details or try again later.'
   : error === 'storage' ? 'Windows could not access saved accounts. Try again, or sign in without saving.'
@@ -138,20 +136,7 @@ export class Companion {
     try {
       const data = await invoke<WorkspaceData>('workspace');
       if (!this.valid(generation)) return;
-      content.replaceChildren();
-      const status = document.createElement('p'); status.className = 'status'; status.setAttribute('role', 'status'); content.append(status);
-      if (data.sticky_note) {
-        const sticky = document.createElement('details'); const heading = document.createElement('summary'); heading.textContent = 'My notes';
-        const body = document.createElement('p'); body.className = 'note-body'; body.textContent = data.sticky_note;
-        sticky.append(heading, body); content.append(sticky);
-      }
-      for (const workspace of data.workspaces) {
-        const group = document.createElement('details'); group.open = true;
-        const heading = document.createElement('summary'); heading.textContent = workspace.name; group.append(heading);
-        this.nodes(group, workspace.nodes, null, new Set(), generation); content.append(group);
-        if (!workspace.nodes.length) group.append(document.createTextNode('No folders yet.'));
-      }
-      if (!data.workspaces.length && !data.sticky_note) status.textContent = 'No workspace items yet. Add them in AAQZ.';
+      new WorkspaceBrowser(content, data, () => this.valid(generation), () => { void this.loadAccounts(true); });
     } catch (error) {
       if (!this.valid(generation)) return;
       if (error === 'unauthenticated') { void this.loadAccounts(true); return; }
@@ -160,35 +145,4 @@ export class Companion {
     }
   }
 
-  private nodes(parent: HTMLElement, nodes: Node[], parentId: number | null, visited: Set<number>, generation: number) {
-    for (const node of nodes.filter(item => item.parent_id === parentId && !visited.has(item.id))) {
-      visited.add(node.id);
-      if (node.type === 'folder') {
-        const folder = document.createElement('details'); const title = document.createElement('summary'); title.textContent = node.name;
-        folder.append(title); this.nodes(folder, nodes, node.id, visited, generation); parent.append(folder);
-      } else if (node.type === 'note') {
-        const detail = document.createElement('details'); const title = document.createElement('summary'); title.textContent = `Note · ${node.name}`;
-        const body = document.createElement('div'); body.className = 'note-body'; detail.append(title, body);
-        let loaded = false; let loading = false;
-        detail.addEventListener('toggle', async () => {
-          if (!detail.open || loaded || loading) return;
-          loading = true; body.textContent = 'Loading note…';
-          try {
-            const note = await invoke<{ name: string; content: string }>('note', { id: node.id });
-            if (this.valid(generation)) { body.textContent = note.content; loaded = true; }
-          } catch (error) {
-            if (this.valid(generation)) {
-              if (error === 'unauthenticated') { void this.loadAccounts(true); return; }
-              body.textContent = 'Unable to load note. Close and reopen it to retry.';
-            }
-          } finally { loading = false; }
-        }); parent.append(detail);
-      } else if (node.type === 'shortcut' && node.url) {
-        const link = button(`↗ ${node.name}`, async () => {
-          try { await invoke('open_shortcut', { url: node.url }); }
-          catch { if (this.valid(generation)) this.status('Cannot open this shortcut. Only http:// and https:// links are supported.'); }
-        }); link.className = 'shortcut'; link.title = node.url; parent.append(link);
-      }
-    }
-  }
 }

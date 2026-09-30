@@ -32,12 +32,13 @@ test.beforeEach(async ({ page }) => {
         if (state.resumeExpired) throw 'unauthenticated';
         state.account = state.saved.find((a: any) => a.id === args.id); state.mode = 'success'; return state.account;
       }
-      if (command === 'workspace') return { workspaces: [{ id: 1, name: '<b>Owned</b>', nodes: [
+      if (command === 'workspace') return state.workspaceData ?? { workspaces: [{ id: 1, name: '<b>Owned</b>', nodes: [
         { id: 10, parent_id: null, name: 'Projects', type: 'folder' },
         { id: 11, parent_id: 10, name: 'Brief', type: 'note' },
         { id: 12, parent_id: 10, name: 'Docs', type: 'shortcut', url: 'https://example.com/docs' },
       ] }], sticky_note: 'Remember this' };
       if (command === 'note') {
+        if (state.noteFails) throw 'connection';
         if (state.delayNote) return new Promise(resolve => { state.resolveNote = resolve; });
         return { name: 'Brief', content: '<script>private note</script>' };
       }
@@ -163,17 +164,18 @@ test('expired saved login prefills email and supports saving opt-out', async ({ 
   expect(await page.evaluate(() => (window as any).calls.find((c: any) => c.command === 'login').args.saveAccount)).toBe(false);
 });
 
-test('workspace tree loads notes safely and opens shortcuts only on click', async ({ page }) => {
+test('workspace icon grid loads notes safely and opens shortcuts only on click', async ({ page }) => {
   await page.getByRole('button', { name: 'Open calendar' }).click();
   await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
   await expect(page.getByText('<b>Owned</b>', { exact: true })).toBeVisible();
   await page.getByText('Projects', { exact: true }).click();
   expect(await page.evaluate(() => (window as any).calls.some((c: any) => c.command === 'note' || c.command === 'open_shortcut'))).toBe(false);
-  await page.getByText('Note · Brief', { exact: true }).click();
+  await page.getByRole('button', { name: 'Read note Brief', exact: true }).click();
   await expect(page.getByText('<script>private note</script>', { exact: true })).toBeVisible();
-  await page.screenshot({ path: 'test-results/workspace.png' });
+  await page.screenshot({ path: 'test-results/workspace-note.png' });
   await expect(page.locator('.section-content script')).toHaveCount(0);
-  await page.getByRole('button', { name: '↗ Docs' }).click();
+  await page.getByRole('button', { name: '← Back', exact: true }).click();
+  await page.getByRole('button', { name: 'Open link Docs', exact: true }).click();
   expect(await page.evaluate(() => (window as any).calls.find((c: any) => c.command === 'open_shortcut').args.url)).toBe('https://example.com/docs');
   await page.getByRole('button', { name: 'Collapse workspace' }).click();
   await page.getByRole('button', { name: 'Open workspace' }).click();
@@ -186,7 +188,7 @@ test('late private note response cannot appear after switching accounts', async 
   await page.getByRole('button', { name: 'Open calendar' }).click();
   await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
   await page.getByText('Projects', { exact: true }).click();
-  await page.getByText('Note · Brief', { exact: true }).click();
+  await page.getByRole('button', { name: 'Read note Brief', exact: true }).click();
   await expect(page.getByText('Loading note…')).toBeVisible();
   await page.getByRole('button', { name: 'Switch account' }).click();
   await page.evaluate(() => (window as any).resolveNote({ name: 'Brief', content: 'Old private note' }));
@@ -314,4 +316,57 @@ test('gear opens settings beside updater and Escape closes settings first', asyn
   await page.getByRole('button', { name: 'Open settings' }).click();
   await page.getByRole('button', { name: 'Close settings' }).click();
   await expect(page.getByRole('checkbox', { name: 'Start with Windows' })).toBeHidden();
+});
+
+
+test('workspace uses flat icon grids, breadcrumbs and a personal note tile', async ({ page }) => {
+  await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
+  await expect(page.locator('.workspace-browser details')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Read note My notes', exact: true }).click();
+  await expect(page.getByText('Remember this', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '← Back', exact: true }).click();
+  await page.getByRole('button', { name: 'Open folder Projects', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Read note Brief', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open link Docs', exact: true })).toBeVisible();
+  await page.screenshot({ path: 'test-results/workspace-icons.png' });
+  await page.getByRole('navigation', { name: 'Folder location' }).getByRole('button', { name: 'All workspaces', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Open folder Projects', exact: true })).toBeVisible();
+  await page.screenshot({ path: 'test-results/workspace-home.png' });
+  expect(await page.evaluate(() => (window as any).calls.filter((c: any) => c.command === 'workspace').length)).toBe(1);
+});
+
+test('nested folders navigate one level at a time and handle empty folders', async ({ page }) => {
+  await page.evaluate(() => { (window as any).workspaceData = { sticky_note: null, workspaces: [
+    { id: 1, name: 'Work', nodes: [
+      { id: 1, name: 'Projects', type: 'folder', parent_id: null },
+      { id: 2, name: 'Archive', type: 'folder', parent_id: 1 },
+      { id: 3, name: 'Deep note', type: 'note', parent_id: 2 },
+      { id: 4, name: 'Empty', type: 'folder', parent_id: null },
+    ] }, { id: 2, name: 'Personal', nodes: [] },
+  ] }; });
+  await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
+  await expect(page.getByText('No items in this workspace yet.')).toBeVisible();
+  await page.getByRole('button', { name: 'Open folder Projects', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Read note Deep note', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Open folder Archive', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Read note Deep note', exact: true })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Folder location' }).getByRole('button', { name: 'Work', exact: true }).click();
+  await page.getByRole('button', { name: 'Open folder Empty', exact: true }).click();
+  await expect(page.getByText('This folder is empty.')).toBeVisible();
+});
+
+test('leaving a loading note suppresses its response and failed notes can retry', async ({ page }) => {
+  await page.evaluate(() => { (window as any).delayNote = true; });
+  await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
+  await page.getByRole('button', { name: 'Open folder Projects', exact: true }).click();
+  await page.getByRole('button', { name: 'Read note Brief', exact: true }).click();
+  await expect(page.getByText('Loading note…')).toBeVisible();
+  await page.getByRole('button', { name: '← Back', exact: true }).click();
+  await page.evaluate(() => { (window as any).resolveNote({ content: 'Late note' }); (window as any).delayNote = false; (window as any).noteFails = true; });
+  await expect(page.getByText('Late note')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Read note Brief', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Retry note', exact: true })).toBeVisible();
+  await page.evaluate(() => { (window as any).noteFails = false; });
+  await page.getByRole('button', { name: 'Retry note', exact: true }).click();
+  await expect(page.getByText('<script>private note</script>', { exact: true })).toBeVisible();
 });
