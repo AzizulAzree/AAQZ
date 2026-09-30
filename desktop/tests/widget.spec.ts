@@ -249,12 +249,14 @@ test('open view stays visible when pointer leaves and keyboard can reveal icons'
 
 test('startup is opt-in and remembers the Windows setting across panels', async ({ page }) => {
   await page.getByRole('button', { name: 'Open calendar' }).click();
+  await page.getByRole('button', { name: 'Open settings' }).click();
   const toggle = page.getByRole('checkbox', { name: 'Start with Windows' });
   await expect(toggle).not.toBeChecked();
   expect(await page.evaluate(() => (window as any).calls.some((c: any) => c.command === 'set_autostart'))).toBe(false);
   await toggle.check();
   await page.getByRole('button', { name: 'Collapse calendar' }).click();
   await page.getByRole('button', { name: 'Open workspace' }).click();
+  await page.getByRole('button', { name: 'Open settings' }).click();
   await expect(toggle).toBeChecked();
   await toggle.uncheck();
   expect(await page.evaluate(() => (window as any).startupEnabled)).toBe(false);
@@ -263,6 +265,7 @@ test('startup is opt-in and remembers the Windows setting across panels', async 
 test('startup failures restore the checkbox and allow retry', async ({ page }) => {
   await page.evaluate(() => { (window as any).startupEnabled = true; (window as any).startupFails = true; });
   await page.getByRole('button', { name: 'Open calendar' }).click();
+  await page.getByRole('button', { name: 'Open settings' }).click();
   const toggle = page.getByRole('checkbox', { name: 'Start with Windows' });
   await expect(toggle).toBeChecked();
   await toggle.click();
@@ -276,9 +279,39 @@ test('startup failures restore the checkbox and allow retry', async ({ page }) =
 test('startup read failure prevents overwriting an unknown setting', async ({ page }) => {
   await page.evaluate(() => { (window as any).startupReadFails = true; });
   await page.getByRole('button', { name: 'Open calendar' }).click();
+  await page.getByRole('button', { name: 'Open settings' }).click();
   await expect(page.getByRole('checkbox', { name: 'Start with Windows' })).toBeDisabled();
   await page.evaluate(() => { (window as any).startupReadFails = false; (window as any).startupEnabled = true; });
   await page.getByRole('button', { name: 'Collapse calendar' }).click();
   await page.getByRole('button', { name: 'Open calendar' }).click();
+  await page.getByRole('button', { name: 'Open settings' }).click();
   await expect(page.getByRole('checkbox', { name: 'Start with Windows' })).toBeChecked();
+});
+
+
+test('gear opens settings beside updater and Escape closes settings first', async ({ page }) => {
+  await page.evaluate(() => { (window as any).updateMode = 'available'; });
+  await page.getByRole('button', { name: 'Open calendar' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Start with Windows' })).toBeHidden();
+  expect(await page.evaluate(() => (window as any).calls.some((c: any) => c.command === 'autostart_status'))).toBe(false);
+  await expect(page.getByRole('button', { name: 'Update now' })).toBeVisible();
+  const gear = page.getByRole('button', { name: 'Open settings' });
+  const updateBox = await page.getByRole('button', { name: 'Update now' }).boundingBox();
+  const gearBox = await gear.boundingBox();
+  expect(gearBox!.x).toBeGreaterThan(updateBox!.x + updateBox!.width);
+  await page.screenshot({ path: 'test-results/settings-gear.png' });
+  await gear.click();
+  await expect(page.getByRole('checkbox', { name: 'Start with Windows' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Update now' })).toBeVisible();
+  await page.screenshot({ path: 'test-results/settings-open.png' });
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('checkbox', { name: 'Start with Windows' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Collapse calendar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open settings' })).toBeFocused();
+  await page.getByRole('button', { name: 'Open settings' }).click();
+  await page.getByRole('button', { name: 'Open workspace' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Start with Windows' })).toBeHidden();
+  await page.getByRole('button', { name: 'Open settings' }).click();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Start with Windows' })).toBeHidden();
 });

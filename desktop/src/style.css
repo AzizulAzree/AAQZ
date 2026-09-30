@@ -15,8 +15,11 @@ button:disabled { opacity: .5; cursor: wait; }
 .toggle { display: flex; align-items: center; justify-content: center; width: 100%; height: 42px; border-radius: 24px; }
 #calendar-panel { height: 464px; display: flex; flex-direction: column; border-top: 1px solid #ffffff12; }
 .calendar-content { flex: 1; min-height: 0; padding: 0 16px 12px; overflow-y: auto; }
-.app-updater { flex: none; min-height: 44px; display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 16px; border-top: 1px solid #ffffff16; font-size: 11px; color: #aeb8ca; }
+.widget-footer { flex: none; min-height: 44px; display: flex; gap: 8px; align-items: center; padding: 8px 12px 8px 16px; border-top: 1px solid #ffffff16; font-size: 11px; color: #aeb8ca; }
+.app-updater { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
 .app-updater button { flex-shrink: 0; background: #324a70; padding: 7px 9px; border-radius: 7px; }
+.settings-toggle { flex: none; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 7px; }
+.settings-toggle[aria-expanded="true"] { color: #aac6ff; background: #324a70; }
 [hidden] { display: none !important; }
 .month-heading { display: flex; align-items: center; justify-content: space-between; margin: 12px 0; }
 h2 { font-size: 15px; font-weight: 600; margin: 0; }

@@ -146,4 +146,4 @@ The collapsed widget rests half-hidden at the top edge of the primary screen. Ho
 
 ### Start with Windows
 
-Open either panel and enable **Start with Windows** at the bottom. It is off by default. The setting registers the installed widget for the current Windows user at sign-in, starts collapsed, and needs no administrator access. Disable the same checkbox to stop automatic startup. This device setting is independent of your AAQZ account.
+Open either panel, click the **gear icon** to the right of the update notice, and enable **Start with Windows** in Settings. It is off by default. The setting registers the installed widget for the current Windows user at sign-in, starts collapsed, and needs no administrator access. Disable the same checkbox to stop automatic startup. This device setting is independent of your AAQZ account.
