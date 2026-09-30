@@ -155,3 +155,7 @@ Workspace uses a grid of labelled folder, link and note icons. Open a folder to 
 ### My notes (0.3.6)
 
 The third launcher icon opens My notes, a dedicated view of your Laravel sticky note. It preserves bold, italic, strikethrough, underline, paragraphs, line breaks, bullet lists and numbered lists, with the web sticky note paper colours. Editor span styles are converted to local text-formatting classes; other markup and attributes are removed. My notes is read-only and refreshes when opened, with no background polling. The sticky note tile has been removed from Workspace.
+
+### Dismiss on outside click (0.3.7)
+
+Click outside the widget or switch to another app to collapse the open view and settings to the half-hidden launcher. Moving the pointer away alone keeps an open view visible. Hover and click an icon to reopen. Dismissal during a resize waits for that transition to finish.

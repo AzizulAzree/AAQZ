@@ -25,6 +25,7 @@ test.beforeEach(async ({ page }) => {
       }
       if (command === 'autostart_status') { if (state.startupReadFails) throw 'read'; return state.startupEnabled ?? false; }
       if (command === 'set_autostart') { if (state.startupFails) throw 'write'; state.startupEnabled = args.enabled; return state.startupEnabled; }
+      if (command === 'resize_widget' && state.delayResize) { state.delayResize = false; return new Promise(resolve => { state.resolveResize = resolve; }); }
       if (command === 'account_state') return { account: state.account, saved: state.saved };
       if (command === 'switch_account') { state.account = null; return; }
       if (command === 'remove_account') { state.saved = state.saved.filter((a: any) => a.id !== args.id); return true; }
@@ -430,4 +431,45 @@ test('saved account sign-in preserves My notes selection and switch clears conte
   await expect(page.locator('.workspace-grid,.days')).toHaveCount(0);
   await page.getByRole('button', { name: 'Switch account', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Sticky note content' })).toHaveCount(0);
+});
+
+
+test('clicking outside collapses every view and settings without closing the app', async ({ page }) => {
+  for (const name of ['calendar', 'workspace', 'My notes']) {
+    await page.getByRole('button', { name: `Open ${name}`, exact: true }).click();
+    await expect(page.locator('#calendar-panel')).toBeVisible();
+    await page.getByRole('button', { name: 'Open settings', exact: true }).click();
+    await page.mouse.click(335, 515);
+    await expect(page.locator('#calendar-panel')).toBeHidden();
+    await expect(page.locator('#widget-settings')).toBeHidden();
+    await expect(page.locator('#app')).not.toHaveClass(/expanded|revealed/);
+    await expect(page.getByRole('button', { name: `Open ${name}`, exact: true })).toBeVisible();
+    expect(await page.evaluate(() => (window as any).calls.filter((c: any) => c.command === 'resize_widget').at(-1).args)).toEqual({ expanded: false, revealed: false });
+  }
+});
+
+test('losing window focus collapses; clicking inside and leaving the pointer do not', async ({ page }) => {
+  await page.getByRole('button', { name: 'Open calendar', exact: true }).click();
+  await page.getByRole('button', { name: 'Next month', exact: true }).click();
+  await expect(page.locator('#calendar-panel')).toBeVisible();
+  await page.mouse.move(335, 515);
+  await expect(page.locator('#calendar-panel')).toBeVisible();
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await expect(page.locator('#calendar-panel')).toBeHidden();
+  await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Open folder Projects', exact: true })).toBeVisible();
+});
+
+test('outside focus loss during opening is applied after the resize finishes', async ({ page }) => {
+  await page.mouse.move(335, 515);
+  await page.evaluate(() => {
+    (window as any).delayResize = true;
+    document.querySelector<HTMLButtonElement>('[data-section="notes"]')!.click();
+  });
+  await page.waitForFunction(() => typeof (window as any).resolveResize === 'function');
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await page.evaluate(() => (window as any).resolveResize());
+  await expect(page.locator('#calendar-panel')).toBeHidden();
+  await expect(page.locator('#app')).not.toHaveClass(/expanded|revealed/);
+  expect(await page.evaluate(() => (window as any).calls.filter((c: any) => c.command === 'resize_widget').at(-1).args)).toEqual({ expanded: false, revealed: false });
 });
