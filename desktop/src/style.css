@@ -149,3 +149,14 @@ input { color: var(--text); }
 :root[data-theme="dark"] .sticky-note-paper { background: linear-gradient(155deg, #51482b, #3e3725); border-color: #857347; color: #f3e6b6; }
 :root[data-theme="dark"] .sticky-note-kicker { color: #e1cf92; border-color: #e1cf9226; }
 @media (prefers-reduced-motion: reduce) { .launchers .toggle { transition: none; } }
+
+.sticky-note-toolbar { display: flex; gap: 3px; padding: 8px 10px; border-bottom: 1px solid #8b74301f; }
+.sticky-note-toolbar button { flex: 1; height: 30px; border-radius: 7px; font-size: 13px; }
+.sticky-note-toolbar [data-format="bold"] { font-weight: 800; }
+.sticky-note-toolbar [data-format="italic"] { font-style: italic; }
+.sticky-note-toolbar [data-format="strikeThrough"] { text-decoration: line-through; }
+.sticky-note-toolbar [aria-pressed="true"] { background: #9b874b33; box-shadow: inset 0 0 0 1px #9b874b55; }
+.sticky-note-content:empty::before { content: attr(data-placeholder); opacity: .65; pointer-events: none; }
+.sticky-note-save { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 12px; border-top: 1px solid #8b74301f; font-size: 10px; }
+.sticky-note-save span { flex: 1; }
+.sticky-note-save button { flex: none; padding: 7px 8px; border-radius: 7px; background: #9b874b22; }

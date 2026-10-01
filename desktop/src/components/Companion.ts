@@ -20,12 +20,13 @@ export class Companion {
   private active = false;
   private generation = 0;
   private calendar?: Calendar;
+  private closeNote?: () => void;
   private tab: 'calendar' | 'workspace' | 'notes' = 'calendar';
   private account: Account | null = null;
   private busy = false;
   constructor(private root: HTMLElement) {}
   open(section: 'calendar' | 'workspace' | 'notes') { this.tab = section; this.active = true; void this.loadAccounts(); }
-  close() { this.active = false; this.generation++; this.calendar?.close(); this.root.replaceChildren(); }
+  close() { this.closeNote?.(); this.closeNote = undefined; this.active = false; this.generation++; this.calendar?.close(); this.root.replaceChildren(); }
   private valid(generation: number) { return this.active && generation === this.generation; }
 
   private async loadAccounts(forcePicker = false) {
@@ -123,6 +124,7 @@ export class Companion {
     if (this.busy) return;
     this.busy = true;
     const generation = ++this.generation;
+    this.closeNote?.(); this.closeNote = undefined;
     this.calendar?.close(); this.root.textContent = 'Signing out…';
     try {
       await invoke('switch_account'); this.account = null;
@@ -137,7 +139,7 @@ export class Companion {
     try {
       const data = await invoke<WorkspaceData>('workspace');
       if (!this.valid(generation)) return;
-      if (this.tab === 'notes') mountStickyNote(content, data.sticky_note);
+      if (this.tab === 'notes' && this.account) this.closeNote = mountStickyNote(content, data.sticky_note, this.account.id);
       else new WorkspaceBrowser(content, data, () => this.valid(generation), () => { void this.loadAccounts(true); });
     } catch (error) {
       if (!this.valid(generation)) return;

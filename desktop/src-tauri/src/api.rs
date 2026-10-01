@@ -290,6 +290,19 @@ pub async fn note(api: State<'_, Api>, id: u64) -> Result<Value, String> {
     get(&api, &format!("/api/widget/notes/{id}")).await
 }
 
+#[tauri::command]
+pub async fn save_sticky_note(api: State<'_, Api>, account_id: u64, content: String) -> Result<Value, String> {
+    if content.chars().count() > 5000 { return Err("note_too_long".into()); }
+    let mut session = api.session.lock().await;
+    // A delayed editor write can never run against a different signed-in user.
+    if session.account.as_ref().map(|account| account.id) != Some(account_id) {
+        return Err("unauthenticated".into());
+    }
+    let result = api.post(&session.client, "sticky-note", json!({ "content": content })).await;
+    if result.as_ref().err().is_some_and(|e| e == "unauthenticated") { session.account = None; }
+    result.map_err(|error| if error == "invalid_credentials" { "note_save_rejected".into() } else { error })
+}
+
 fn safe_url(value: &str) -> Result<Url, String> {
     let url = Url::parse(value).map_err(|_| "unsafe_url")?;
     if !["https", "http"].contains(&url.scheme())

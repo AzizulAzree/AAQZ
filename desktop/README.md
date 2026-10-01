@@ -163,3 +163,7 @@ Click outside the widget or switch to another app to collapse the open view and 
 ### Glass appearance (0.4.0)
 
 All widget views use translucent glass surfaces with light and dark palettes. Open the gear menu and choose System, Light or Dark under Appearance. The choice is saved locally on this device. System follows Windows appearance changes. Glass is rendered in the webview with CSS transparency, highlights and backdrop filtering; it does not enable native Windows desktop acrylic blur. No additional runtime dependency is required.
+
+### Editable sticky note (0.4.1)
+
+My notes now edits the same Laravel sticky-note content with Bold, Italic, Strikethrough, Bullet list, Numbered list and Clear style. Autosave starts 450 ms after typing pauses; Save now retries manually. Closing a view flushes its draft. Saves are serialized and tied to the signed-in account. Failed drafts are retained in memory for this app session, separately per account; wait for Saved before quitting. Formatting is sanitized into interoperable HTML, paste is plain text, and the Laravel 5,000-character content limit includes markup. Deploy the authenticated POST /api/widget/sticky-note endpoint before publishing; it changes only content and preserves the web note position/collapse settings.

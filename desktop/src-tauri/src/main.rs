@@ -134,6 +134,7 @@ fn main() {
             switch_account,
             remove_account,
             workspace,
+            save_sticky_note,
             note,
             open_shortcut
         ])

@@ -81,6 +81,18 @@ class WidgetCalendarController extends Controller
         ])->header('Cache-Control', 'private, no-store');
     }
 
+    public function saveStickyNote(Request $request): JsonResponse
+    {
+        $data = $request->validate(['content' => ['present', 'nullable', 'string', 'max:5000']]);
+        // Update only content: desktop editing must not move/collapse the web note.
+        $note = $request->user()->stickyNote()->updateOrCreate([], [
+            'content' => filled($data['content']) ? $data['content'] : null,
+        ]);
+
+        return response()->json(['saved_at' => $note->updated_at?->toIso8601String()])
+            ->header('Cache-Control', 'private, no-store');
+    }
+
     public function calendar(Request $request, CalendarEntryCollector $collector): JsonResponse
     {
         $data = $request->validate(['month' => ['nullable', 'date_format:Y-m']]);
