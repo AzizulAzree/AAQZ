@@ -3,6 +3,7 @@
 use reqwest::Url;
 use tauri_plugin_autostart::ManagerExt;
 mod api;
+mod startup;
 use api::*;
 
 use tauri::menu::{Menu, MenuItem};
@@ -52,7 +53,9 @@ fn resize_widget(
 
 #[tauri::command]
 fn autostart_status(app: tauri::AppHandle) -> Result<bool, String> {
-    app.autolaunch().is_enabled().map_err(|_| "Unable to read Windows startup setting".into())
+    let enabled = app.autolaunch().is_enabled().map_err(|_| "Unable to read Windows startup setting".to_string())?;
+    if enabled { startup::repair().map_err(|_| "Unable to repair Windows startup command".to_string())?; }
+    Ok(enabled)
 }
 
 #[tauri::command]
@@ -60,6 +63,7 @@ fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<bool, String> {
     let manager = app.autolaunch();
     if enabled { manager.enable() } else { manager.disable() }
         .map_err(|_| "Unable to change Windows startup setting".to_string())?;
+    if enabled { startup::repair().map_err(|_| "Unable to repair Windows startup command".to_string())?; }
     manager.is_enabled().map_err(|_| "Unable to verify Windows startup setting".into())
 }
 
@@ -70,6 +74,8 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            // Preserve opt-in and Task Manager overrides; update only an enabled entry.
+            if app.autolaunch().is_enabled().unwrap_or(false) { let _ = startup::repair(); }
             let base =
                 std::env::var("API_BASE_URL").unwrap_or_else(|_| DEFAULT_API_BASE_URL.into());
             let url = Url::parse(&base)?;

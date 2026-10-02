@@ -167,3 +167,7 @@ All widget views use translucent glass surfaces with light and dark palettes. Op
 ### Editable sticky note (0.4.1)
 
 My notes now edits the same Laravel sticky-note content with Bold, Italic, Strikethrough, Bullet list, Numbered list and Clear style. Autosave starts 450 ms after typing pauses; Save now retries manually. Closing a view flushes its draft. Saves are serialized and tied to the signed-in account. Failed drafts are retained in memory for this app session, separately per account; wait for Saved before quitting. Formatting is sanitized into interoperable HTML, paste is plain text, and the Laravel 5,000-character content limit includes markup. Deploy the authenticated POST /api/widget/sticky-note endpoint before publishing; it changes only content and preserves the web note position/collapse settings.
+
+### Windows startup repair (0.4.2)
+
+Enabled startup entries now quote the executable path, including spaces in AAQZ Calendar. On launch or when reading/enabling startup, the widget repairs its enabled entry to the current executable. Disabled startup and Task Manager overrides stay disabled. Windows starts the app after this user signs in. App updates persist between restarts; update checks still happen when expanded.
